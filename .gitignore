@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+OUT_*.txt
+OUT_*.hdf5
+LD_FILE_*.gz
+SUM_STATS_FILE.txt
+data/
