@@ -86,3 +86,24 @@ AUC(scores$raw_effects_prs, scores$true_phens - 1) # 63.3
 AUC(scores$pval_derived_effects_prs, scores$true_phens - 1) # 35.1?
 plot(prs.test, scores$pval_derived_effects_prs, pch = 20)
 plot(scores$raw_effects_prs, scores$pval_derived_effects_prs, pch = 20)
+
+# P+T
+system.time(
+  system(glue::glue(
+    "python3 {ldpred} p+t",
+    " --cf OUT_COORD_FILE.hdf5",
+    " --ldr {round(bigreadr::nlines('data/data_gwas.bim') / 3000)}",
+    " --r2 0.05",
+    " --out OUT_WEIGHTS_FILE"
+  ))
+) # 12 min
+
+# Evaluate with LDpred
+system(glue::glue(
+  "python3 {ldpred} score",
+  " --gf data/data_test",
+  " --rf OUT_WEIGHTS_FILE",
+  " --rf-format P+T",
+  " --r2 0.05",
+  " --out OUT_SCORE_FILE"
+))

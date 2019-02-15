@@ -20,13 +20,12 @@ ind.keep <- snp_clumping(G, infos.chr = CHR, S = LPVAL, thr.r2 = 0.05,
 qplot(ind.keep, LPVAL[ind.keep]) + ylim(1, NA) +
   geom_hline(yintercept = -log10(5e-8), color = "red", linetype = 2)
 
+# Why negative?
 prs.train <- snp_PRS(train$genotypes, -BETA[ind.keep], ind.keep = ind.keep,
                      lpS.keep = LPVAL[ind.keep], thr.list = THR)
 auc.train <- apply(prs.train, 2, AUC, train$fam$affection - 1)
 plot(auc.train, pch = 20)
-AUCBoot(prs.train[, 1], train$fam$affection - 1)
-#        Mean        2.5%       97.5%          Sd
-# 0.684868419 0.670152389 0.699043396 0.007377221
+AUCBoot(prs.train[, 1], train$fam$affection - 1)  ## 68.5 [67.0-69.9]
 
 # snp_readBed("data/data_test.bed")
 test <- snp_attach("data/data_test.rds")
@@ -36,6 +35,5 @@ dim(prs.test) # 2000 x 50
 auc.test <- apply(prs.test, 2, AUC, test$fam$affection)
 plot(auc.test, pch = 20)
 
-AUCBoot(prs.test[, which.max(auc.train)], test$fam$affection)
-#       Mean       2.5%      97.5%         Sd
-# 0.69636273 0.66797865 0.72373555 0.01428186
+AUCBoot(prs.test[, which.max(auc.train)], test$fam$affection)  ## 69.6 [66.8-72.4]
+
