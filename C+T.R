@@ -14,9 +14,8 @@ library(ggplot2)
 THR <- exp(seq(log(0.01), log(0.999 * max(LPVAL)), length.out = 50))
 hist(LPVAL); abline(v = THR, lty = 3)
 
-ind.keep <- snp_clumping(G, infos.chr = CHR, S = LPVAL, thr.r2 = 0.05, size = 8000,
-                         is.size.in.bp = TRUE, infos.pos = POS,
-                         ncores = nb_cores())
+ind.keep <- snp_clumping(G, infos.chr = CHR, S = LPVAL, thr.r2 = 0.05,
+                         infos.pos = POS, ncores = nb_cores())
 qplot(ind.keep, LPVAL[ind.keep]) + ylim(1, NA) +
   geom_hline(yintercept = -log10(5e-8), color = "red", linetype = 2)
 
@@ -33,8 +32,8 @@ prs.test <- snp_PRS(test$genotypes, BETA[ind.keep], ind.keep = ind.keep,
                     lpS.keep = LPVAL[ind.keep], thr.list = THR)
 dim(prs.test) # 2000 x 50
 auc.test <- apply(prs.test, 2, AUC, test$fam$affection)
-plot(auc.test, pch = 20)
+plot(THR, auc.test, pch = 20, log = "x")
 
 AUCBoot(prs.test[, which.max(auc.train)], test$fam$affection)
-# 75.0 [72.4.8-77.6] (2000) || 75.2 [72.6-77.8] (4000)
+# 75.0 [72.3-77.6]
 
