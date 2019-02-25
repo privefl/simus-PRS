@@ -14,7 +14,7 @@ library(ggplot2)
 THR <- exp(seq(log(0.01), log(0.999 * max(LPVAL)), length.out = 50))
 hist(LPVAL); abline(v = THR, lty = 3)
 
-ind.keep <- snp_clumping(G, infos.chr = CHR, S = LPVAL, thr.r2 = 0.05,
+ind.keep <- snp_clumping(G, infos.chr = CHR, S = LPVAL, thr.r2 = 0.1, size = 250,
                          infos.pos = POS, ncores = nb_cores())
 qplot(ind.keep, LPVAL[ind.keep]) + ylim(1, NA) +
   geom_hline(yintercept = -log10(5e-8), color = "red", linetype = 2)
@@ -35,5 +35,16 @@ auc.test <- apply(prs.test, 2, AUC, test$fam$affection)
 plot(THR, auc.test, pch = 20, log = "x")
 
 AUCBoot(prs.test[, which.max(auc.train)], test$fam$affection)
+# 62.8 [59.8-65.7] (with thr.r2 = 0.1 and size = 250)
 # 75.0 [72.3-77.6]
+# 77.5 [74.9-80.1] (with thr.r2 = 0.01 and size = 10000)
 
+#### Find beta for stacking:
+b <- rnorm(ncol(prs.test))
+true <- prs.test %*% b
+
+ind_last_thr <- rowSums(outer(LPVAL[ind.keep], THR, '>'))
+b2 <- c(0, cumsum(b))
+try <- big_prodVec(test$genotypes, BETA[ind.keep] * b2[ind_last_thr + 1L],
+                   ind.col = ind.keep)
+plot(try, true, pch = 20); abline(0, 1, col = "red")

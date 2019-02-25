@@ -20,7 +20,7 @@
 
 
 \usepackage{xr}
-\externaldocument{PRS-supp}
+\externaldocument{SCT-supp}
 
 \linenumbers
 \doublespacing
@@ -94,13 +94,59 @@
 
 \section{Introduction}
 
-
+Clumping and Thresholding (C+T, also called P+T) is a simple technique for computing Polygenic Risk Scores (PRS) based on Genome-Wide Assocation Studies (GWAS) summary statistics, and has been used for more than ten years \cite[]{euesden2014prsice,purcell2009common}.
+C+T consists in making a simple sum of allele counts (genotypes), weighted by effect sizes from GWAS summary-statistics, after having restricted the variants included in this sum. The first step consists in keeping only one representative variant by region of linkage disequilibrium (LD) by discarding variants that are too correlated with this particular one. The second step removes variants that are not significant enough, based on p-value from the GWAS summary statistics.
+The first step is called ``clumping'' and the second step is called ``thresholding''. 
+When applying C+T, one has to choose at least 3 hyper-parameters: for clumping, the squared correlation threshold $r_{c}^2$ and the window size $w_c$ of clumping [TODO: RENAME]; for thresholding, the p-value threshold $p_T$.
+More often than otherwise, C+T users fix default values for clumping ($r_{c}^2$ of 0.1 or 0.2, and $w_c$ of 250kb or 500kb), and test a few values for $p_T$ between $1$ and $10^{-8}$.
+Moreover, one need to use imputed data to get the same variants between the GWAS and the data to compute the PRS on. People usually use a liberal inclusion of SNPs whatever the imputation accuracy of the variants are, maybe thinking that the more variants they allow in the model, the better would be the prediction.
+In this paper, we show that all those parameters are really important, and that choosing those hyper-parameters well could substantially increase the predictive power of C+T over using default parameters.
+[TODO: ADD STACKING]
+To support our point, we use the UK Biobank data and external summary statistics for similuted and real data analyses \cite[]{bycroft2017genome}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Material and Methods}
 
+\subsection{Data}
 
+We randomly choose two million variants from the UK Biobank imputed dataset that have a minor allele frequency larger than 1\%. We restrict individuals to the ones referred as of White British ancestry by the UK Biobank and excluded all second individuals in each pair reported as related individuals by the UK Biobank \cite[]{bycroft2017genome}. [TODO: HOW MANY REMAIN]
+
+\subsection{Simulations}
+
+We split the data in three sets: one for training (choosing the hyper-parameters) and one for testing (evaluating the models) for which we sample 10,000 individuals; and one for computing summary statistics (GWAS) with the [NB] remaining individuals. 
+For simulating phenotypes and computing summary statistics, we transform the data into hard calls using PLINK `\texttt{--hard-call-threshold random}' option that randomly assigns imputation probabilities to hard calls \cite[]{chang2015second}. 
+For training and testing tests, we use data in dosage format.
+This enables us to simulate phenotypes using the ``real'' underlying genotypes and use the INFO score (imputation accuracies) reported for the UK Biobank data for the imputed data.
+
+We simulate binary phenotypes using a Liability Threshold Model (LTM) with a prevalence of 20\% \cite[]{falconer1965inheritance}. We vary simulation parameters in order to match a range of genetic architectures from low to high polygenicity. 
+This is achieved by varying the number of causal variants (100, 10K, or 1M), and the disease heritability $h^2$ (30\% or 60\%). 
+Liability scores are computed from a model with additive effects only: we compute the liability score of the i-th individual as \[y_i = \sum_{j\in S_\text{causal}} w_j \cdot \widetilde{G_{i,j}} ~~+~~ \epsilon_i~,\] where $S_\text{causal}$ is the set of causal SNPs, $w_j$ are weights generated from a Gaussian distribution $N(0, h^2 / \vert S_\text{causal} \vert)$, $G_{i,j}$ is the allele count of individual $i$ for SNP $j$, $\widetilde{G_{i,j}}$ corresponds to its standardized version (zero mean and unit variance for all SNPs), and $\epsilon$ follows a Gaussian distribution $N(0, 1 - h^2)$.
+Each simulation is repeated 20 times.
+
+\subsection{Real summary statistics}
+
+We also investigate prediction using real summary statistics from published GWAS, summarized in table \ref{tab:sumstats} \cite[]{buniello2018nhgri}.
+
+\begin{table}[h]
+\caption{\label{tab:sumstats}}
+\vspace*{0.5em}
+\centering
+\begin{tabular}{|l|c|c|c|c|c|}
+  \hline
+Trait & GWAS size (cases / controls) & Number of SNPs & Citation & Download \\
+  \hline
+Breast cancer &  &  & \cite{michailidou2017association} & \href{ftp://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/MichailidouK_29059683_GCST004988}{link} \\ 
+Prostate cancer & 79,148 / 61,106 &  & \cite{schumacher2018association} & \href{http://practical.icr.ac.uk/blog/?page_id=8164}{link} \\ 
+Coronary artery disease &  &  & \cite{van2018identification} & \href{ftp://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/vanderHarstP_29212778_GCST005194}{link} \\ 
+Inflammatory bowel disease \\
+Rheumatoid Arthritis \\
+Type 2 diabetes  \\
+Mean arterial pressure?? \\
+Intelligence / EA?? \\
+   \hline
+\end{tabular}
+\end{table} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -128,5 +174,16 @@ This research has been conducted using the UK Biobank Resource under Application
 
 \bibliographystyle{natbib}
 \bibliography{refs}
+
+
+\newpage
+\section*{Supplementary Data}
+
+\renewcommand{\thefigure}{S\arabic{figure}}
+\setcounter{figure}{0}
+\renewcommand{\thetable}{S\arabic{table}}
+\setcounter{table}{0}
+
+
 
 \end{document}
