@@ -19,8 +19,8 @@
 \usepackage{bbm}
 
 
-\usepackage{xr}
-\externaldocument{SCT-supp}
+%\usepackage{xr}
+%\externaldocument{SCT-supp}
 
 \linenumbers
 \doublespacing
@@ -99,6 +99,7 @@ C+T consists in making a simple sum of allele counts (genotypes), weighted by ef
 The first step is called ``clumping'' and the second step is called ``thresholding''.
 When applying C+T, one has to choose at least 3 hyper-parameters: for clumping, the squared correlation threshold $r_{c}^2$ and the window size $w_c$ of clumping [TODO: RENAME]; for thresholding, the p-value threshold $p_T$.
 More often than otherwise, C+T users fix default values for clumping ($r_{c}^2$ of 0.1 or 0.2, and $w_c$ of 250kb or 500kb), and test a few values for $p_T$ between $1$ and $10^{-8}$.
+[TABLE REFS]
 Moreover, one need to use imputed data to get the same variants between the GWAS and the data to compute the PRS on. People usually use a liberal inclusion of SNPs whatever the imputation accuracy of the variants are, maybe thinking that the more variants they allow in the model, the better would be the prediction.
 In this paper, we show that all those parameters are really important, and that choosing those hyper-parameters well could substantially increase the predictive power of C+T over using default parameters.
 [TODO: ADD STACKING]
@@ -110,7 +111,7 @@ To support our point, we use the UK Biobank data and external summary statistics
 
 \subsection{Simulations}
 
-We use variants from the UK Biobank imputed dataset that have a minor allele frequency larger than 1\% and an imputation INFO score larger than 0.3. There are almost 10M such variants, we randomly choose 2M of them.
+We use variants from the UK Biobank imputed dataset that have a minor allele frequency larger than 1\% and an imputation INFO score larger than 0.3. There are almost 10M such variants, we randomly choose 1M of them.
 We restrict individuals to the ones referred as of White British ancestry by the UK Biobank and exclude all second individuals in each pair reported as related individuals by the UK Biobank \cite[]{bycroft2017genome}.
 335,609 individuals remain and we split them in three sets: one for training (e.g.\ choosing the hyper-parameters) and one for testing (evaluating the models) for which we sample 10,000 different individuals in both sets; and one for computing summary statistics (GWAS) with the 315,609 remaining individuals.
 
@@ -118,10 +119,12 @@ For simulating phenotypes and computing summary statistics, we transform the dat
 For the train and test sets, we use data in dosage format.
 This enables us to simulate phenotypes using the ``real'' underlying genotypes as hard calls and use the INFO score (imputation accuracies) reported for the UK Biobank data for the imputed data. [END CLEAR ENOUGH??]
 
-We simulate binary phenotypes using a Liability Threshold Model (LTM) with a prevalence of 20\% \cite[]{falconer1965inheritance}. We vary simulation parameters in order to match a range of genetic architectures from low to high polygenicity.
-This is achieved by varying the number of causal variants (100, 10K, or 1M), and the disease heritability $h^2$ (30\% or 60\%). [NO HLA?? WE SHOW PLR MUCH BETTER FOR THIS]
-Liability scores are computed from a model with additive effects only: we compute the liability score of the i-th individual as \[y_i = \sum_{j\in S_\text{causal}} w_j \cdot \widetilde{G_{i,j}} ~~+~~ \epsilon_i~,\] where $S_\text{causal}$ is the set of causal SNPs, $w_j$ are weights generated from a Gaussian distribution $N(0, h^2 / \vert S_\text{causal} \vert)$, $G_{i,j}$ is the allele count of individual $i$ for SNP $j$, $\widetilde{G_{i,j}}$ corresponds to its standardized version (zero mean and unit variance for all SNPs), and $\epsilon$ follows a Gaussian distribution $N(0, 1 - h^2)$.
-Each simulation is repeated 20 times.
+We simulate binary phenotypes with a heritability $h^2 = 50\%$ using a Liability Threshold Model (LTM) with a prevalence of 10\% \cite[]{falconer1965inheritance}. We vary the number of causal variants (100, 10K, or 1M) in order to match a range of genetic architectures from low to high polygenicity.
+Liability scores are computed from a model with additive effects only: we compute the liability score of the i-th individual as \(y_i = \sum_{j\in S_\text{causal}} w_j \widetilde{G_{i,j}} + \epsilon_i,\) where $S_\text{causal}$ is the set of causal SNPs, $w_j$ are weights generated from a Gaussian distribution $N(0, h^2 / \vert S_\text{causal} \vert)$, $G_{i,j}$ is the allele count of individual $i$ for SNP $j$, $\widetilde{G_{i,j}}$ corresponds to its standardized version (zero mean and unit variance for all SNPs), and $\epsilon$ follows a Gaussian distribution $N(0, 1 - h^2)$.
+
+To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we have minimal population structure in our data, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (40 minutes vs 16 hours) while providing similar effect sizes and Z-scores (Figure \ref{fig:GWAS}).
+
+Each simulation is repeated 10 times.
 
 \subsection{Real summary statistics}
 
@@ -184,6 +187,10 @@ This research has been conducted using the UK Biobank Resource under Application
 \renewcommand{\thetable}{S\arabic{table}}
 \setcounter{table}{0}
 
-
+\begin{figure}[htb]
+\centerline{\includegraphics[width=0.95\textwidth]{equivalence.png}}
+\caption{Comparison of estimated effect sizes (\textbf{A}) and Z-scores (\textbf{B}) if computed using a logistic regression with 10 principal components as covariates, or with a simple Cochran-Armitage additive test. Phenotypes were simulated using 100 causal SNPs only, allowing for large effects.}
+\label{fig:GWAS}
+\end{figure}
 
 \end{document}
