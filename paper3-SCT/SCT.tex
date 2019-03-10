@@ -97,13 +97,16 @@
 Clumping and Thresholding (C+T, also called P+T) is a simple technique for computing Polygenic Risk Scores (PRS) based on Genome-Wide Assocation Studies (GWAS) summary statistics, and has been used for more than ten years \cite[]{euesden2014prsice,purcell2009common}.
 C+T consists in making a simple sum of allele counts (genotypes), weighted by effect sizes from GWAS summary-statistics, after having restricted the variants included in this sum. The first step consists in keeping only one representative variant by region of linkage disequilibrium (LD) by discarding variants that are too correlated with this particular one. The second step removes variants that are not significant enough, based on p-value from the GWAS summary statistics.
 The first step is called ``clumping'' and the second step is called ``thresholding''.
-When applying C+T, one has to choose at least 3 hyper-parameters: for clumping, the squared correlation threshold $r_{c}^2$ and the window size $w_c$ of clumping [TODO: RENAME]; for thresholding, the p-value threshold $p_T$.
-More often than otherwise, C+T users fix default values for clumping ($r_{c}^2$ of 0.1 or 0.2, and $w_c$ of 250kb or 500kb), and test a few values for $p_T$ between $1$ and $10^{-8}$.
-[TABLE REFS]
-Moreover, one need to use imputed data to get the same variants between the GWAS and the data to compute the PRS on. People usually use a liberal inclusion of SNPs whatever the imputation accuracy of the variants are, maybe thinking that the more variants they allow in the model, the better would be the prediction.
-In this paper, we show that all those parameters are really important, and that choosing those hyper-parameters well could substantially increase the predictive power of C+T over using default parameters.
-[TODO: ADD STACKING]
-To support our point, we use the UK Biobank data and external summary statistics for similuted and real data analyses \cite[]{bycroft2017genome}.
+
+When applying C+T, one has to choose at least 3 hyper-parameters: for clumping, the squared correlation threshold $r_{c}^2$ and the window size $w_c$ of clumping [RENAME??]; for thresholding, the p-value threshold $p_T$.
+More often than otherwise, C+T users fix default values for clumping, such as $r_{c}^2$ of 0.1 (default of PRSice), 0.2  or 0.5 (default of PLINK), and $w_c$ of 250kb (default of PRSice and PLINK) or 500kb, and test a few values for $p_T$ ranging from $1$ to $10^{-8}$ at most \cite[]{wray2014research,euesden2014prsice,chang2015second}.
+Moreover, one need to use imputed data to get the same variants between the GWAS and the data to compute the PRS on. People usually use a liberal inclusion of SNPs whatever the imputation accuracy of the variants are, maybe thinking that the more variants they allow in the model, the better would be the prediction. We consider this threshold on quality of imputation (sometimes called INFO score) as a fourth parameter of C+T.
+
+Here, we show that these four hyper-parameters are really important, and that choosing those hyper-parameters well could substantially increase the predictive power of C+T over using current default parameters.
+We implement an efficient way to compute scores for many different parameters in our R package bigsnpr \cite[]{prive2017efficient}. 
+Moreover, instead of choosing the set of parameters that correspond to the best prediction, we show that stacking all scores improves prediction beyond the best prediction of any of those scores \cite[]{breiman1996stacked}. 
+We call this method SCT, which stands for Stacked Clumping and Thresholding.
+To support our point, we use the UK Biobank data and external summary statistics for simulated and real data analyses \cite[]{bycroft2017genome}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -119,10 +122,10 @@ For simulating phenotypes and computing summary statistics, we transform the dat
 For the train and test sets, we use data in dosage format.
 This enables us to simulate phenotypes using the ``real'' underlying genotypes as hard calls and use the INFO score (imputation accuracies) reported for the UK Biobank data for the imputed data. [END CLEAR ENOUGH??]
 
-We simulate binary phenotypes with a heritability $h^2 = 50\%$ using a Liability Threshold Model (LTM) with a prevalence of 10\% \cite[]{falconer1965inheritance}. We vary the number of causal variants (100, 10K, or 1M) in order to match a range of genetic architectures from low to high polygenicity.
+We simulate binary phenotypes with a heritability $h^2 = 0.5$ using a Liability Threshold Model (LTM) with a prevalence of 10\% \cite[]{falconer1965inheritance}. We vary the number of causal variants (100, 10K, or 1M) in order to match a range of genetic architectures from low to high polygenicity.
 Liability scores are computed from a model with additive effects only: we compute the liability score of the i-th individual as \(y_i = \sum_{j\in S_\text{causal}} w_j \widetilde{G_{i,j}} + \epsilon_i,\) where $S_\text{causal}$ is the set of causal SNPs, $w_j$ are weights generated from a Gaussian distribution $N(0, h^2 / \vert S_\text{causal} \vert)$, $G_{i,j}$ is the allele count of individual $i$ for SNP $j$, $\widetilde{G_{i,j}}$ corresponds to its standardized version (zero mean and unit variance for all SNPs), and $\epsilon$ follows a Gaussian distribution $N(0, 1 - h^2)$.
 
-To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we have minimal population structure in our data, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (40 minutes vs 16 hours) while providing similar effect sizes and Z-scores (Figure \ref{fig:GWAS}).
+To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we restricted the data to have minimal population structure, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (40 minutes vs 16 hours) while providing similar effect sizes and Z-scores (Figure \ref{fig:GWAS}).
 
 Each simulation is repeated 10 times.
 
@@ -151,11 +154,40 @@ Intelligence / EA?? \\
 \end{tabular}
 \end{table}
 
+\subsection{Stacked Clumping and Thresholding (SCT)}
+
+We compute C+T scores for each chromosome separately and for many parameters:
+\begin{itemize}
+\item Threshold on imputation INFO score within \{0.3, 0.6, 0.9, 0.95\}.
+\item Squared correlation threshold of clumping $r_{c}^2$ within \{0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95\}.
+\item Base size of clumping window within \{50, 100, 200, 500\}. $w_c$ is then computed as the base size divided by $r_{c}^2$. For example, for $r_{c}^2 = 0.2$, we test values of $w_c$ within \{250, 500, 1000, 2500\} (in kb). This is motivated by the fact that linkage disequilibrium is inversely proportional to genetic distance between variants \cite[]{pritchard2001linkage}.
+\item A sequence of 50 thresholds on p-values between 0.1 (-log10(p) = 1) and the most significant p-value, equaly spaced on a log-log scale.
+\end{itemize}
+Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
+Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
+
+Then, we stack all these polygenic scores (for individuals in the training set) by using these scores as variables in an efficient penalized logistic regression available in our R package bigstatsr \cite[]{prive2019efficient}.
+This results in a linear combination of C+T scores from which we derive a single vector of  effect sizes. The resulting single vector of new effect sizes is used for evaluation in a test set.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Results}
 
+\subsection{Simulations}
 
+
+\subsection{Real summary statistics}
+
+For breast cancer, for a large grid of the 4 hyper-parameters, the maximum AUC on the training set is \textasciitilde64\% (Figure \ref{fig:BC}). If using default parameters (i.e.\ $r_{c}^2$ = 0.1 or 0.2; $w_c \le 500$; liberal threshold of 0.3 on imputation INFO score), the maximum AUC is \textasciitilde63\%. 
+[TALK ABOUT PARAMETERS FOR 10 BEST PREDICTIONS??]
+If using SCT, the AUC on the test set is larger than 66\%.
+[TODO: ADD NEW EFFECTS] 
+
+\begin{figure}[htb]
+\centerline{\includegraphics[width=0.95\textwidth]{grid-BC.png}}
+\caption{AUC values when predicting breast cancer status for many parameters of C+T. Blue line corresponds to the maximum AUC on the training set. Red line corresponds to AUC obtained with SCT on the test set. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the last hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
+\label{fig:BC}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -165,6 +197,8 @@ Intelligence / EA?? \\
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
 
 \section*{Acknowledgements}
 
