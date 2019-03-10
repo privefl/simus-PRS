@@ -178,15 +178,21 @@ This results in a linear combination of C+T scores from which we derive a single
 
 \subsection{Real summary statistics}
 
-For breast cancer, for a large grid of the 4 hyper-parameters, the maximum AUC on the training set is \textasciitilde64\% (Figure \ref{fig:BC}). If using default parameters (i.e.\ $r_{c}^2$ = 0.1 or 0.2; $w_c \le 500$; liberal threshold of 0.3 on imputation INFO score), the maximum AUC is \textasciitilde63\%. 
+For breast cancer, for a large grid of the 4 hyper-parameters, the maximum AUC on the training set is \textasciitilde64\% (Figure \ref{fig:grid-BC}). If using default parameters (i.e.\ with $r_{c}^2$ = 0.1 or 0.2, $w_c \le 500$, and a liberal threshold of 0.3 on imputation INFO score), the maximum AUC is \textasciitilde63\%. 
 [TALK ABOUT PARAMETERS FOR 10 BEST PREDICTIONS??]
 If using SCT, the AUC on the test set is larger than 66\%.
-[TODO: ADD NEW EFFECTS] 
+Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with some effects being largely unchanged, and others having an effect that is shrunk to 0 or completely 0, i.e.\ variants not included in the final model (Figure \ref{fig:eff-BC}).
 
 \begin{figure}[htb]
 \centerline{\includegraphics[width=0.95\textwidth]{grid-BC.png}}
 \caption{AUC values when predicting breast cancer status for many parameters of C+T. Blue line corresponds to the maximum AUC on the training set. Red line corresponds to AUC obtained with SCT on the test set. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the last hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
-\label{fig:BC}
+\label{fig:grid-BC}
+\end{figure}
+
+\begin{figure}[htb]
+\centerline{\includegraphics[width=0.7\textwidth]{new-effects-BC.png}}
+\caption{Scatter plot of new effect sizes resulting from SCT versus initial effect sizes of GWAS. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
+\label{fig:eff-BC}
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
