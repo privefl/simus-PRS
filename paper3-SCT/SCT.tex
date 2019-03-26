@@ -41,7 +41,7 @@
 
 \let\tabbeg\tabular
 \let\tabend\endtabular
-\renewenvironment{tabular}{\begin{adjustbox}{max width=\textwidth}\tabbeg}{\tabend\end{adjustbox}}
+\renewenvironment{tabular}{\begin{adjustbox}{max width=0.9\textwidth}\tabbeg}{\tabend\end{adjustbox}}
 
 \makeatletter
 
@@ -106,7 +106,7 @@ Here, we show that these four hyper-parameters are really important, and that ch
 We implement an efficient way to compute scores for many different parameters in our R package bigsnpr \cite[]{prive2017efficient}. 
 Moreover, instead of choosing the set of parameters that correspond to the best prediction, we show that stacking all scores improves prediction beyond the best prediction of any of those scores \cite[]{breiman1996stacked}. 
 We call this method SCT, which stands for Stacked Clumping and Thresholding.
-To support our point, we use the UK Biobank data and external summary statistics for simulated and real data analyses \cite[]{bycroft2017genome}.
+Using the UK Biobank data \cite[]{bycroft2017genome} and external summary statistics for simulated and real data analyses, we show that testing a larger grid of parameters consistently improves predictions as compared to using some default parameters. We also show that SCT consistenly improves predictions over any single C+T prediction.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -135,26 +135,27 @@ We also investigate prediction using real summary statistics from published GWAS
 [DATA??]
 
 \begin{table}[h]
-\caption{\label{tab:sumstats}}
+\caption{Available cases and controls in UK Biobank (UKBB) for many binary traits, along with corresponding published GWAS summary statistics.\label{tab:sumstats}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|c|}
   \hline
-Trait & GWAS size (cases / controls) & Number of SNPs & Citation & Download \\
+Trait & UKBB size & GWAS size & \#SNPs in GWAS & Citation \\
   \hline
-Breast cancer &  &  & \cite{michailidou2017association} & \href{ftp://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/MichailidouK_29059683_GCST004988}{link} \\
-Prostate cancer & 79,148 / 61,106 &  & \cite{schumacher2018association} & \href{http://practical.icr.ac.uk/blog/?page_id=8164}{link} \\
-Coronary artery disease &  &  & \cite{van2018identification} & \href{ftp://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/vanderHarstP_29212778_GCST005194}{link} \\
+Breast cancer (BRCA) & 10,690 / 159,163 & 137,045 / 119,078 & 11,792,542 & \cite{michailidou2017association} \\
+Rheumatoid arthritis (RA) &  & 29,880 / 73,758 & 9,739,303 & \cite{okada2014genetics} \\
+Type 1 diabetes (T1D) & 768 / 314,570 & & & \\
+Type 2 diabetes (T2D) & 14,156 / 314,570 & 26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
+Prostate cancer (PRCA) & 6330 / 141,591 & 79,148 / 61,106 & 20,370,946 & \cite{schumacher2018association} \\
+Coronary artery disease &  &  &  & \cite{van2018identification} \\
 Inflammatory bowel disease \\
-Rheumatoid Arthritis \\
-Type 2 diabetes  \\
 Mean arterial pressure?? \\
 Intelligence / EA?? \\
    \hline
 \end{tabular}
 \end{table}
 
-\subsection{Stacked Clumping and Thresholding (SCT)}
+\subsection{Clumping and Thresholding (C+T) and Stacked C+T (SCT)}
 
 We compute C+T scores for each chromosome separately and for many parameters:
 \begin{itemize}
@@ -167,7 +168,12 @@ Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors o
 Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
 
 Then, we stack all these polygenic scores (for individuals in the training set) by using these scores as variables in an efficient penalized logistic regression available in our R package bigstatsr \cite[]{prive2019efficient}.
-This results in a linear combination of C+T scores from which we derive a single vector of  effect sizes. The resulting single vector of new effect sizes is used for evaluation in a test set.
+This results in a linear combination of C+T scores from which we derive a single vector of  effect sizes. The resulting single vector of new effect sizes is used for evaluation in the test set. 
+We refer to this method as SCT in the rest of the paper.
+
+From this grid, we derive two scores: one using default parameters, i.e.\ with $r_{c}^2$ = 0.2, $w_c$ = 500, a liberal threshold of 0.3 on imputation INFO score, and choosing the p-value threshold ($\leq 10^{-8}$) maximizing the AUC on the training set; one corresponding to the set of the previous four parameters that maximizes AUC on the training set. 
+We refer to these scores as ``std\_CT'' and ``max\_CT'' in the rest of the paper.
+Note that, as opposed to SCT, C+T scores use the same set of parameters for all chromosomes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -178,20 +184,36 @@ This results in a linear combination of C+T scores from which we derive a single
 
 \subsection{Real summary statistics}
 
-For breast cancer, for a large grid of the 4 hyper-parameters, the maximum AUC on the training set is \textasciitilde64\% (Figure \ref{fig:grid-BC}). If using default parameters (i.e.\ with $r_{c}^2$ = 0.1 or 0.2, $w_c \le 500$, and a liberal threshold of 0.3 on imputation INFO score), the maximum AUC is \textasciitilde63\%. 
-[TALK ABOUT PARAMETERS FOR 10 BEST PREDICTIONS??]
-If using SCT, the AUC on the test set is larger than 66\%.
-Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with some effects being largely unchanged, and others having an effect that is shrunk to 0 or completely 0, i.e.\ variants not included in the final model (Figure \ref{fig:eff-BC}).
+In table \ref{tab:AUC}, we report AUC values on the test set (mean and 95\% CI from 10,000 bootstrap samples) and the number of variants used in the final model.
 
-\begin{figure}[htb]
-\centerline{\includegraphics[width=0.95\textwidth]{grid-BC.png}}
-\caption{AUC values when predicting breast cancer status for many parameters of C+T. Blue line corresponds to the maximum AUC on the training set. Red line corresponds to AUC obtained with SCT on the test set. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the last hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
-\label{fig:grid-BC}
-\end{figure}
+\begin{table}[h]
+\caption{AUC values on the test set of UKBB (mean [95\% CI] from 10,000 bootstrap samples) and the number of variants used in the final model.\label{tab:AUC}}
+\vspace*{0.5em}
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+  \hline
+Trait & std\_CT & max\_CT & SCT \\
+  \hline
+Breast cancer (BRCA) &  \\
+Rheumatoid arthritis (RA) & \\
+Type 1 diabetes (T1D) &  \\
+Type 2 diabetes (T2D) & \\
+Prostate cancer (PRCA) & 64.9 [63.2-66.5] & 65.2 [63.6-66.8] & 67.2 [65.7-68.7] \\
+ & 1683 & 610 & 461,733 \\
+   \hline
+\end{tabular}
+\end{table}
+
+[TALK ABOUT PARAMETERS FOR 10 BEST PREDICTIONS??]
+
+Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with some effects being largely unchanged, and others having an effect that is shrunk to 0 or completely 0, i.e.\ variants not included in the final model (Figure \ref{fig:eff-BC}).
+[TALK ABOUT PARTICULAR CASES]
+
+
 
 \begin{figure}[htb]
 \centerline{\includegraphics[width=0.7\textwidth]{new-effects-BC.png}}
-\caption{Scatter plot of new effect sizes resulting from SCT versus initial effect sizes of GWAS. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
+\caption{Breast cancer. Scatter plot of new effect sizes resulting from SCT versus initial effect sizes of GWAS. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
 \label{fig:eff-BC}
 \end{figure}
 
@@ -218,6 +240,7 @@ This research has been conducted using the UK Biobank Resource under Application
 \bibliographystyle{natbib}
 \bibliography{refs}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newpage
 \section*{Supplementary Data}
@@ -231,6 +254,14 @@ This research has been conducted using the UK Biobank Resource under Application
 \centerline{\includegraphics[width=0.95\textwidth]{equivalence.png}}
 \caption{Comparison of estimated effect sizes (\textbf{A}) and Z-scores (\textbf{B}) if computed using a logistic regression with 10 principal components as covariates, or with a simple Cochran-Armitage additive test. Phenotypes were simulated using 100 causal SNPs only, allowing for large effects.}
 \label{fig:GWAS}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[htb]
+\centerline{\includegraphics[width=\textwidth]{grid-BC.png}}
+\caption{Breast cancer. AUC values when predicting disease status for many parameters of C+T. Blue line corresponds to the maximum AUC on the training set. Red line corresponds to AUC obtained with SCT on the test set. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
+\label{fig:grid-BC}
 \end{figure}
 
 \end{document}
