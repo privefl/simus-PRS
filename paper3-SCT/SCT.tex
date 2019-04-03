@@ -107,7 +107,7 @@ Here, we show that these four hyper-parameters are really important, and that ch
 We implement an efficient way to compute scores for many different parameters in our R package bigsnpr \cite[]{prive2017efficient}. 
 Moreover, instead of choosing the set of parameters that correspond to the best prediction, we show that stacking all scores improves prediction beyond the best prediction of any of those scores \cite[]{breiman1996stacked}. 
 We call this method SCT, which stands for Stacked Clumping and Thresholding.
-Using the UK Biobank data \cite[]{bycroft2017genome} and external summary statistics for simulated and real data analyses, we show that testing a larger grid of parameters consistently improves predictions as compared to using some default parameters. We also show that SCT consistenly improves predictions over any single C+T prediction.
+Using the UK Biobank data \cite[]{bycroft2017genome} and external summary statistics for simulated and real data analyses, we show that testing a larger grid of parameters consistently improves predictions as compared to using some default parameters for C+T. We also show that SCT consistenly improves predictions over any single C+T prediction.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -203,6 +203,8 @@ Type 1 diabetes (T1D) & 73.7 [69.4-77.8] & 76.6 [72.6-80.5] & 79.4 [75.5-83.2] \
 Type 2 diabetes (T2D) & \\
 Prostate cancer (PRCA) & 64.9 [63.2-66.5] & 65.2 [63.6-66.8] & 67.2 [65.7-68.7] \\
  & 1683 & 610 & 461,733 \\
+Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 64.0 [62.7-65.2] \\
+ & 1184 & 87,572 & 315,373 \\
    \hline
 \end{tabular}
 \end{table}
