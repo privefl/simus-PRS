@@ -9,3 +9,4 @@ OUT_*.hdf5
 LD_FILE_*.gz
 SUM_STATS_FILE.txt
 data/
+PRSice*
