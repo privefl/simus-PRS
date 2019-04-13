@@ -135,10 +135,11 @@ Each simulation is repeated 10 times.
 \subsection{Real summary statistics}
 
 We also investigate prediction using real summary statistics from published GWAS, summarized in table \ref{tab:sumstats} \cite[]{buniello2018nhgri}.
-[DATA??]
+As for simulations, we restrict individuals to the ones referred as of White British ancestry by the UK Biobank and exclude all second individuals in each pair reported as related individuals by the UK Biobank \cite[]{bycroft2017genome}.
+As some reproducible code is worth a thousand words, we invite the reader to look at our analysis code to see how we define phenotypes in the UK Biobank; we summarize the number of cases and controls for each phenotype in table \ref{tab:sumstats}.
 
 \begin{table}[h]
-\caption{Available cases and controls in UK Biobank (UKBB) for many binary traits, along with corresponding published GWAS summary statistics (from GWAS that do not include UKBB).\label{tab:sumstats}}
+\caption{Available cases and controls in UK Biobank (UKBB) for many binary traits, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS we use here.\label{tab:sumstats}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|c|}
@@ -150,11 +151,10 @@ Rheumatoid arthritis (RA) &  & ~~29,880 / ~~73,758 & ~~9,739,303 & \cite{okada20
 Type 1 diabetes (T1D) & ~~~~~~~768 / 314,570 & ~~~~~5913 / ~~~~~8828  & ~~8,996,866 & \cite{censin2017childhood} \\
 Type 2 diabetes (T2D) & ~~14,156 / 314,570 & ~~26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
 Prostate cancer (PRCA) & ~~~~~6330 / 141,591 & ~~79,148 / ~~61,106 & 20,370,946 & \cite{schumacher2018association} \\
-Depression (MDD) & ~~26,121 / 291,735 &   & 13,554,550 & \\
+Depression (MDD) & ~~26,121 / 291,735 & ~~59,851 / 113,154 & 13,554,550 & \cite{wray2018genome} \\
 Coronary artery disease (CAD) & ~~12,263 / 225,927 & ~~60,801 / 123,504 & ~~9,455,778 & \cite{nikpay2015comprehensive} \\
 Asthma & ~~43,787 / 261,985 & ~~19,954 / 107,715 & ~~2,001,280 & \cite{demenais2018multiancestry} \\
-Celiac disease?? \\
-   \hline
+  \hline
 \end{tabular}
 \end{table}
 
@@ -162,23 +162,23 @@ To match summary statistics with data from the UK Biobank, we first remove ambig
 
 \subsection{Clumping and Thresholding (C+T) and Stacked C+T (SCT)}
 
-We compute C+T scores for each chromosome separately and for many parameters:
+We compute C+T scores \textit{for each chromosome separately} and for many parameters:
 \begin{itemize}
 \item Threshold on imputation INFO score within \{0.3, 0.6, 0.9, 0.95\}.
 \item Squared correlation threshold of clumping $r_{c}^2$ within \{0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95\}.
 \item Base size of clumping window within \{50, 100, 200, 500\}. $w_c$ is then computed as the base size divided by $r_{c}^2$. For example, for $r_{c}^2 = 0.2$, we test values of $w_c$ within \{250, 500, 1000, 2500\} (in kb). This is motivated by the fact that linkage disequilibrium is inversely proportional to genetic distance between variants \cite[]{pritchard2001linkage}.
 \item A sequence of 50 thresholds on p-values between 0.1 (-log10(p) = 1) and the most significant p-value, equaly spaced on a log-log scale.
 \end{itemize}
-Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
 Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
 
+Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
 Then, we stack all these polygenic scores (for individuals in the training set) by using these scores as variables in an efficient penalized logistic regression available in our R package bigstatsr \cite[]{prive2019efficient}.
 This results in a linear combination of C+T scores from which we derive a single vector of  effect sizes. The resulting single vector of new effect sizes is used for evaluation in the test set. 
-We refer to this method as SCT in the rest of the paper.
+We refer to this method as ``SCT'' in the rest of the paper.
 
-From this grid, we derive two scores: one using default parameters, i.e.\ with $r_{c}^2$ = 0.2, $w_c$ = 500, a liberal threshold of 0.3 on imputation INFO score, and choosing the p-value threshold ($\leq 10^{-8}$) maximizing the AUC on the training set; one corresponding to the set of the previous four parameters that maximizes AUC on the training set. 
+From this grid, we derive two C+T scores: one using default parameters, i.e.\ with $r_{c}^2$ = 0.2, $w_c$ = 500, a liberal threshold of 0.3 on imputation INFO score, and choosing the p-value threshold ($\leq 10^{-8}$) maximizing the AUC on the training set; one corresponding to the set of the previous four parameters that maximizes AUC on the training set. 
 We refer to these scores as ``std\_CT'' and ``max\_CT'' in the rest of the paper.
-Note that, as opposed to SCT, C+T scores use the same set of parameters for all chromosomes.
+Note that, as opposed to SCT, the two C+T scores use the same set of parameters for all chromosomes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -186,6 +186,11 @@ Note that, as opposed to SCT, C+T scores use the same set of parameters for all 
 
 \subsection{Simulations}
 
+\begin{figure}[h]
+\centerline{\includegraphics[width=0.8\textwidth]{AUC-simus.pdf}}
+\caption{Results of the 6 simulation scenarios: (100) 100 random causal SNPs; (10K) 10,000 random causal SNPs; (1M) all 1M SNPs are causal SNPs; (2chr) 100 SNPs of chromosome 1 are causal and all SNPs of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal SNPs, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal SNPs in some long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}).}
+\label{fig:AUC-simus}
+\end{figure}
 
 \subsection{Real summary statistics}
 
@@ -273,6 +278,89 @@ This research has been conducted using the UK Biobank Resource under Application
 \begin{figure}[htb]
 \centering
 \begin{subfigure}[b]{0.7\textwidth}
+\includegraphics[width=\textwidth]{new-effects-simu100.png}
+\caption{100 random causal SNPs}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{0.7\textwidth}
+\includegraphics[width=\textwidth]{new-effects-simu10K.png}
+\caption{10,000 random causal SNPs}
+\end{subfigure}
+\end{figure}
+
+\begin{figure}[htb]\ContinuedFloat
+\centering
+\begin{subfigure}[b]{0.7\textwidth}
+\includegraphics[width=\textwidth]{new-effects-simu1M.png}
+\caption{all 1M SNPs are causal SNPs}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{0.7\textwidth}
+\includegraphics[width=\textwidth]{new-effects-simu2chr.png}
+\caption{Causal SNPs on chromosomes 1 \& 2}
+\end{subfigure}
+\end{figure}
+
+\begin{figure}[htb]\ContinuedFloat
+\centering
+\begin{subfigure}[b]{0.7\textwidth}
+\includegraphics[width=\textwidth]{new-effects-simuerr.png}
+\caption{10,000 random causal SNPs, but 10\% of the GWAS effects are reported with an opposite effect}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{0.7\textwidth}
+\includegraphics[width=\textwidth]{new-effects-simuHLA.png}
+\caption{7105 causal SNPs in some long-range LD region of chromosome 6.}
+\end{subfigure}
+
+\caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS in the first simulation of each simulation scenario. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[htb]
+\centering
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu100.png}
+\caption{100 random causal SNPs}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu10K.png}
+\caption{10,000 random causal SNPs}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu1M.png}
+\caption{all 1M SNPs are causal SNPs}
+\end{subfigure}
+\end{figure}
+
+\begin{figure}[htb]\ContinuedFloat
+\centering
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu2chr.png}
+\caption{Causal SNPs on chromosomes 1 \& 2}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simuerr.png}
+\caption{10,000 random causal SNPs, but 10\% of the GWAS effects are reported with an opposite effect}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simuHLA.png}
+\caption{7105 causal SNPs in some long-range LD region of chromosome 6.}
+\end{subfigure}
+
+\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in the first simulation of each simulation scenario. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[htb]
+\centering
+\begin{subfigure}[b]{0.7\textwidth}
 \includegraphics[width=\textwidth]{new-effects-BRCA.png}
 \caption{Breast cancer}
 \end{subfigure}
@@ -320,7 +408,8 @@ This research has been conducted using the UK Biobank Resource under Application
 \includegraphics[width=\textwidth]{new-effects-asthma.png}
 \caption{Asthma}
 \end{subfigure}
-\caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
+
+\caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS in real data applications. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -373,7 +462,7 @@ This research has been conducted using the UK Biobank Resource under Application
 \caption{Asthma}
 \end{subfigure}
 
-\caption{AUC values when predicting disease status for many parameters of C+T. Blue line corresponds to the maximum AUC on the training set. Red line corresponds to AUC obtained with SCT on the test set. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
+\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in real data applications. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
 \end{figure}
 
 \end{document}
