@@ -145,7 +145,7 @@ We also investigate prediction using real summary statistics from published GWAS
   \hline
 Trait & UKBB size & GWAS size & GWAS \#SNPs & GWAS citation \\
   \hline
-Breast cancer (BRCA) & ~~10,690 / 159,163 & 137,045 / 119,078 & 11,792,542 & \cite{michailidou2017association} \\
+Breast cancer (BRCA) & ~~11,578 / 158,391 & 137,045 / 119,078 & 11,792,542 & \cite{michailidou2017association} \\
 Rheumatoid arthritis (RA) &  & ~~29,880 / ~~73,758 & ~~9,739,303 & \cite{okada2014genetics} \\
 Type 1 diabetes (T1D) & ~~~~~~~768 / 314,570 & ~~~~~5913 / ~~~~~8828  & ~~8,996,866 & \cite{censin2017childhood} \\
 Type 2 diabetes (T2D) & ~~14,156 / 314,570 & ~~26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
@@ -157,6 +157,8 @@ Celiac disease?? \\
    \hline
 \end{tabular}
 \end{table}
+
+To match summary statistics with data from the UK Biobank, we first remove ambiguous alleles A/T or C/G. [TODO COMPLETE]
 
 \subsection{Clumping and Thresholding (C+T) and Stacked C+T (SCT)}
 
@@ -197,7 +199,8 @@ In table \ref{tab:AUC}, we report AUC values on the test set (mean and 95\% CI f
   \hline
 Trait & std\_CT & max\_CT & SCT \\
   \hline
-Breast cancer (BRCA) &  \\
+Breast cancer (BRCA) & 62.4 [61.2-63.7] & 63.5 [62.3-64.8] & 65.9 [64.7-67.1] \\
+ & 5903 & 1985 & 582,878 \\
 Rheumatoid arthritis (RA) & \\
 Type 1 diabetes (T1D) & 73.7 [69.4-77.8] & 76.6 [72.6-80.5] & 79.4 [75.5-83.2] \\
  & 13,169 & 156 & 160,756 \\
@@ -208,6 +211,7 @@ Depression (MDD) & 55.3 [54.5-56.1] & 60.0 [59.2-60.7] & 60.6 [59.8-61.3] \\
  & 202,175 & 155,037 & 504,886 \\
 Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 64.0 [62.7-65.2] \\
  & 1184 & 87,572 & 315,373 \\
+Asthma \\
    \hline
 \end{tabular}
 \end{table}
@@ -308,13 +312,13 @@ This research has been conducted using the UK Biobank Resource under Application
 \begin{figure}[htb]\ContinuedFloat
 \centering
 \begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-BRCA.png}
-\caption{Breast cancer.}
+\includegraphics[width=\textwidth]{new-effects-CAD.png}
+\caption{Coronary artery disease}
 \end{subfigure}
 \\~\\~\\
 \begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-PRCA.png}
-\caption{Prostate cancer.}
+\includegraphics[width=\textwidth]{new-effects-asthma.png}
+\caption{Asthma}
 \end{subfigure}
 \caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
 \end{figure}
@@ -360,13 +364,13 @@ This research has been conducted using the UK Biobank Resource under Application
 \begin{figure}[htb]\ContinuedFloat
 \centering
 \begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-T2D.png}
-\caption{Type 2 diabetes}
+\includegraphics[width=\textwidth]{grid-CAD.png}
+\caption{Coronary artery disease}
 \end{subfigure}
 \\~\\
 \begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-PRCA.png}
-\caption{Prostate cancer}
+\includegraphics[width=\textwidth]{grid-asthma.png}
+\caption{Asthma}
 \end{subfigure}
 
 \caption{AUC values when predicting disease status for many parameters of C+T. Blue line corresponds to the maximum AUC on the training set. Red line corresponds to AUC obtained with SCT on the test set. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
