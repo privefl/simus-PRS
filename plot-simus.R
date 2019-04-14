@@ -29,9 +29,9 @@ ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
   geom_col(position = position_dodge(), alpha = 0.5, color = "black", size = 1) +
   geom_errorbar(aes(ymin = inf, ymax = sup),
                 position = position_dodge(width = 0.9), color = "black", width = 0.2, size = 1) +
-  scale_y_continuous(limits = c(0.5, NA), minor_breaks = 0:20 / 20,
+  scale_y_continuous(limits = c(0.5, 0.9), minor_breaks = 0:50 / 50,
                      oob = scales::rescale_none) +
   labs(x = "Simulation", y = "AUC") +
   theme(legend.position = c(0.4, 0.87))
 
-ggsave("figures/AUC-simus.pdf", width = 900, height = 600, scale = 1 / 100)
+ggsave("figures/AUC-simus.pdf", width = 870, height = 600, scale = 1 / 100)
