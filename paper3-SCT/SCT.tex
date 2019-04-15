@@ -149,7 +149,7 @@ Trait & UKBB size & GWAS size & GWAS \#SNPs & GWAS citation \\
 Breast cancer (BRCA) & ~~11,578 / 158,391 & 137,045 / 119,078 & 11,792,542 & \cite{michailidou2017association} \\
 Rheumatoid arthritis (RA) & ~~~~~5615 / 226,327 & ~~29,880 / ~~73,758 & ~~9,739,303 & \cite{okada2014genetics} \\
 Type 1 diabetes (T1D) & ~~~~~~~771 / 314,547 & ~~~~~5913 / ~~~~~8828  & ~~8,996,866 & \cite{censin2017childhood} \\
-Type 2 diabetes (T2D) & ~~14,156 / 314,570 & ~~26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
+Type 2 diabetes (T2D) & ~~14,176 / 314,547 & ~~26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
 Prostate cancer (PRCA) & ~~~~~6330 / 141,591 & ~~79,148 / ~~61,106 & 20,370,946 & \cite{schumacher2018association} \\
 Depression (MDD) & ~~22,278 / 255,534 & ~~59,851 / 113,154 & 13,554,550 & \cite{wray2018genome} \\
 Coronary artery disease (CAD) & ~~12,263 / 225,927 & ~~60,801 / 123,504 & ~~9,455,778 & \cite{nikpay2015comprehensive} \\
@@ -198,10 +198,10 @@ In all these scenarios, maxCT --that tests a much larger grid of hyper-parameter
 
 \subsection{Real summary statistics}
 
-In table \ref{tab:AUC}, we report AUC values on the test set (mean and 95\% CI from 10,000 bootstrap samples) and the number of variants used in the final model.
+In table \ref{tab:AUC}, we report AUC values on the test set (mean and 95\% CI from $10^4$ bootstrap samples) and the number of variants used in the final model.
 
 \begin{table}[h]
-\caption{AUC values on the test set of UKBB (mean [95\% CI] from 10,000 bootstrap samples) and the number of variants used in the final model.\label{tab:AUC}}
+\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples) and the number of variants used in the final model.\label{tab:AUC}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -215,13 +215,15 @@ Rheumatoid arthritis (RA) & 59.7 [57.6-61.8] & 60.3 [58.3-62.3] & 61.3 [59.2-63.
 Type 1 diabetes (T1D) & 75.2 [72.1-78.2] & 76.5 [73.5-79.5] & 78.6 [75.5-81.5] \\
  & 1387 & 253 & 164,291 \\
 Type 2 diabetes (T2D) & \\
-Prostate cancer (PRCA) & 64.9 [63.2-66.5] & 65.2 [63.6-66.8] & 67.2 [65.7-68.7] \\
- & 1683 & 610 & 461,733 \\
-Depression (MDD) & 55.3 [54.5-56.1] & 60.0 [59.2-60.7] & 60.6 [59.8-61.3] \\
- & 202,175 & 155,037 & 504,886 \\
-Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 64.0 [62.7-65.2] \\
- & 1184 & 87,572 & 315,373 \\
+ &  \\
+Prostate cancer (PRCA) &  \\
+ &  \\
+Depression (MDD) & 53.9 [52.6-55.2] & 59.6 [58.3-60.8] & 59.8 [58.5-61.0] \\
+ & 170,505 & 205,096 & 473,333 \\
+Coronary artery disease (CAD) & 60.1 [58.8-61.3] & 61.1 [59.9-62.4] & 63.9 [62.6-65.1] \\
+ & 1112 & 79,793 & 282,565 \\
 Asthma \\
+ &  \\
    \hline
 \end{tabular}
 \end{table}
@@ -243,8 +245,24 @@ Effects resulting from SCT have mostly the same sign as initial effects from GWA
 
 \section{Discussion}
 
+\subsection{Limitations of the study}
 
+We analyze 8 different binary phenotypes in this study; there are more to be analyzed. For example, for psychiatric disease, we include only depression (MDD) as the other phenotypes such as schyzophrenia or bipolar disorder have very few cases in the UK Biobank; dedicated datasets should be used to assess effectiveness of maxCT and SCT for such diseases. 
+We also do not analyze many automimmune diseases as summary statistics are often outdated in terms of sample size and number of imputed variants\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/} and, because there are large effects on chromosome 6, methods that use individual-level data are likely to perform better \cite[]{prive2019efficient}.
+We also voluntarily do not analyze any continuous trait such as height or BMI because there are many individual-level data available for such phenotypes and methods directly using individual-level data are likely to perform better than the ones using summary statistics \cite[]{prive2019efficient}. 
+Phenotypes with minuscule effects such as educational attainment for which huge GWAS summary statistics are available might be an exception \cite[]{lee2018gene}.
 
+Moreover, we focus this study on improving the C+T method. The C+T method is by far the simplest and most widely-used method for constructing polygenic risk scores based on summary statistics. The idea behind C+T is really simple because it directly uses weights learned from GWAS; it further removes SNPs as one does when reporting hits from GWAS, i.e.\ only SNPs that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported. 
+Yet, there are two other established methods based on summary statistics: LDpred and lassosum, but do not provide much better predictions as compared to stdCT \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Other methods are emerging such as ...; they are not very easy to use nor understand not nor they are really performing better than ... [CITE OTHERS?? BE NICE??]
+
+\subsection{Areas of improvement}
+
+There are many ways to improve prediction further. For example, developing techniques that can handle errors should be of great interest \cite[]{smith2011improving,bolin2014supervised}. There are many applications in medical data: mistakes when meta-analyses results \cite[]{greco2013meta}, mistakes in identifying diseases \cite[]{wray2012impact,eastwood2016algorithms}, defining ambiguous alleles \cite[]{chen2018prs}.
+For example, in one simulation scenario (``err'') of this paper, we show that having an extra layer of training consisting in stacking C+T models makes it possible to partially correct for mistakes. We have also remarked improved prediction for SCT when including ambiguous alleles for real phenotypes while maxCT would decrease (data not shown).
+
+\subsection{Conclusion}
+
+No 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
