@@ -19,7 +19,7 @@ auc_simu <- res_simu %>%
   gather("Method", "AUC", -simu) %>%
   mutate(AUC = map(AUC, ~as_tibble(as.list(.x))),
          Method = ordered(Method, levels = c("auc_std_prs", "auc_max_prs", "auc_SCT"),
-                          labels = c("std_CT", "max_CT", "SCT"))) %>%
+                          labels = c("stdCT", "maxCT", "SCT"))) %>%
   unnest()
 
 ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
