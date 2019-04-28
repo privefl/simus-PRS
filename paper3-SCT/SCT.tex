@@ -130,7 +130,7 @@ This enables us to simulate phenotypes using ``real'' underlying genotypes as ha
 
 We simulate binary phenotypes with a heritability $h^2 = 0.5$ using a Liability Threshold Model (LTM) with a prevalence of 10\% \cite[]{falconer1965inheritance}. We vary the number of causal variants (100, 10K, or 1M) in order to match a range of genetic architectures from low to high polygenicity.
 Liability scores are computed from a model with additive effects only: we compute the liability score of the i-th individual as \(y_i = \sum_{j\in S_\text{causal}} w_j \widetilde{G_{i,j}} + \epsilon_i,\) where $S_\text{causal}$ is the set of causal SNPs, $w_j$ are weights generated from a Gaussian distribution $N(0, h^2 / \vert S_\text{causal} \vert)$, $G_{i,j}$ is the allele count of individual $i$ for SNP $j$, $\widetilde{G_{i,j}}$ corresponds to its standardized version (zero mean and unit variance for all SNPs), and $\epsilon$ follows a Gaussian distribution $N(0, 1 - h^2)$.
-[ADD 3 MORE COMPLEX ARCHI]
+We also add three more complex architectures: ``2chr'', 100 SNPs of chromosome 1 and all SNPs of chromosome 2 are causal, with half of the heritability for both chromosomes; ``err'', we sample 10,000 random causal SNPs, but 10\% of the GWAS effects are reported with an opposite effect; ``HLA'', 7105 causal SNPs are chosen in one long-range LD region of chromosome 6.
 
 To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we restricted the data to have minimal population structure, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (40 minutes vs 16 hours) while providing similar effect sizes and Z-scores (Figure \ref{fig:GWAS}).
 
@@ -141,7 +141,6 @@ Each simulation is repeated 10 times.
 We also investigate prediction using real summary statistics from published GWAS, summarized in table \ref{tab:sumstats} \cite[]{buniello2018nhgri}.
 As in simulations, we restrict individuals to the ones referred as of White British ancestry by the UK Biobank and exclude all second individuals in each pair reported as related individuals by the UK Biobank \cite[]{bycroft2017genome}.
 As some reproducible code is worth a thousand words, we invite the reader to look at our analysis code to see how we define phenotypes in the UK Biobank; we summarize the number of cases and controls for each phenotype in table \ref{tab:sumstats}.
-[OK??]
 
 \begin{table}[h]
 \caption{Available cases and controls in UK Biobank (UKBB) for many binary traits, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS we use here.\label{tab:sumstats}}
@@ -164,7 +163,7 @@ Asthma & ~~43,787 / 261,985 & ~~19,954 / 107,715 & ~~2,001,280 & \cite{demenais2
 \end{table}
 
 We keep all variants with a GWAS p-value lower than 0.1. 
-To match remaining summary statistics with data from the UK Biobank, we first remove ambiguous alleles [A/T] and [C/G]. We then augment the summary statistics twice: first by adding copied rows with the complementary alleles, then by adding copied rows with reverse alleles and effects. Finally, we use an inner join on the combination of chromosome, position and the two alleles to match these augmented summary statistics with data from the UK Biobank.
+To match remaining summary statistics with data from the UK Biobank, we first remove ambiguous alleles [A/T] and [C/G]. We then augment the summary statistics twice: first by adding copied rows with the complementary alleles, then by adding copied rows with reverse alleles and effects. Finally, we use an inner join on the combination of chromosome, position and the two alleles to match these augmented summary statistics with data from the UK Biobank. Note that, when there are no or very few alleles that are flipped, we disable the strand flipping option and therefore do not remove ambiguous alleles.
 
 \subsection{Clumping and Thresholding (C+T) and Stacked C+T (SCT)}
 
@@ -176,7 +175,7 @@ We compute C+T scores \textit{for each chromosome separately} and for many param
 \item A sequence of 50 thresholds on p-values between 0.1 (-log10(p) = 1) and the most significant p-value, equaly spaced on a log-log scale.
 \end{itemize}
 Thus, for individual $i$, chromosome $k$ and the four hyper-parameters info\_thr, $r_{c}^2$, $w_c$ and $p_T$, we compute
-\[\rm{V}_i^{(k)}(\text{info\_thr},~r_{c}^2,~w_c,~p_T) = \sum_{\substack{j \in \text{chromosome k} \\ \text{INFO}_j \geq \text{info\_thr} \\ j \in S_\text{clumping}(r_{c}^2,~w_c) \\ p_j~<~p_T}} \hat\beta_j \cdot G_{i,j}~,\] where $\hat\beta_j$ ($p_j$) are the effect sizes (p-values) estimated from the GWAS and $G_{i,j}$ is the dosage for individual $i$ and SNP $j$.
+\[\rm{V}_i^{(k)}(\text{info\_thr},~r_{c}^2,~w_c,~p_T) = \sum_{\substack{j ~\in~ \text{chromosome k} \\ \text{INFO}_j ~\geq~ \text{info\_thr} \\ j ~\in~ S_\text{clumping}(r_{c}^2,~w_c) \\ p_j~<~p_T}} \hat\beta_j \cdot G_{i,j}~,\] where $\hat\beta_j$ ($p_j$) are the effect sizes (p-values) estimated from the GWAS and $G_{i,j}$ is the dosage for individual $i$ and SNP $j$.
 %Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
 
 Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
@@ -222,7 +221,7 @@ Rheumatoid arthritis (RA) & 59.7 [57.6-61.8] & 60.3 [58.3-62.3] & 61.3 [59.2-63.
 Type 1 diabetes (T1D) & 75.4 [72.4-78.4] & 76.9 [73.9-79.7] & 78.7 [75.7-81.7] \\
  & 1112 & 267 & 135,991 \\
 Type 2 diabetes (T2D) & 59.5 [58.5-60.5] & 60.7 [59.8-61.6] & 63.8 [62.9-64.8] \\
- & 252 & 33238 & 535,785 \\
+ & 252 & 33,238 & 535,785 \\
 Prostate cancer (PRCA) &  \\
  &  \\
 Depression (MDD) & 53.9 [52.6-55.2] & 59.6 [58.3-60.8] & 59.8 [58.5-61.0] \\
@@ -254,18 +253,22 @@ Effects resulting from SCT have mostly the same sign as initial effects from GWA
 
 \subsection{Limitations of the study}
 
-We analyze 8 different binary phenotypes in this study; there are more to be analyzed. For example, for psychiatric disease, we include only depression (MDD) as the other phenotypes such as schyzophrenia or bipolar disorder have very few cases in the UK Biobank; dedicated datasets should be used to assess effectiveness of maxCT and SCT for such diseases. 
-We also do not analyze many automimmune diseases as summary statistics are often outdated in terms of sample size and number of imputed variants\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/} and, because there are large effects on chromosome 6, methods that use individual-level data are likely to perform better \cite[]{prive2019efficient}.
-We also voluntarily do not analyze any continuous trait such as height or BMI because there are many individual-level data available for such phenotypes and methods directly using individual-level data are likely to perform better than the ones using summary statistics \cite[]{prive2019efficient}. 
+We analyze 8 different binary phenotypes in this study; there are more to be analyzed. For example, for psychiatric disease, we include only depression (MDD) because diseases such as schyzophrenia and bipolar disorder have very few cases in the UK Biobank; dedicated datasets should be used to assess effectiveness of maxCT and SCT for such diseases. 
+We also do not analyze many automimmune diseases as summary statistics are often outdated in terms of sample size and number of imputed variants\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/} and, because there are usually large effects on chromosome 6, methods that use individual-level data are likely to provide better predictive models \cite[]{prive2019efficient}.
+We also voluntarily do not analyze any continuous trait such as height or BMI because there are many individual-level data available for such phenotypes and methods directly using individual-level data are likely to provide better predictive models than the ones using summary statistics \cite[]{prive2019efficient}. 
 Phenotypes with minuscule effects such as educational attainment for which huge GWAS summary statistics are available might be an exception \cite[]{lee2018gene}.
 
 Moreover, we focus this study on improving the C+T method. The C+T method is by far the simplest and most widely-used method for constructing polygenic risk scores based on summary statistics. The idea behind C+T is really simple because it directly uses weights learned from GWAS; it further removes SNPs as one does when reporting hits from GWAS, i.e.\ only SNPs that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported. 
-Yet, there are two other established methods based on summary statistics: LDpred and lassosum, but do not provide much better predictions as compared to stdCT \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Other methods are emerging such as ...; they are not very easy to use nor understand not nor they are really performing better than ... [CITE OTHERS?? BE NICE??]
+Yet, there are two other established methods based on summary statistics: LDpred and lassosum, but do not provide much better predictions as compared to stdCT \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Other methods are emerging such as ...; they are not very easy to use, nor easy to understand, nor they perform much better than stdCT. [CITE OTHERS?? BE NICE??]
 
 \subsection{Areas of improvement}
 
-There are many ways to improve prediction further. For example, developing techniques that can handle errors should be of great interest \cite[]{smith2011improving,bolin2014supervised}. There are many applications in medical data: mistakes when meta-analyses results \cite[]{greco2013meta}, mistakes in identifying diseases \cite[]{wray2012impact,thomas2018frequency}, defining ambiguous alleles \cite[]{chen2018prs}.
+There are many ways to improve prediction further. For example, developing techniques that can handle errors should be of great interest \cite[]{smith2011improving,bolin2014supervised}. There are many applications in medical data: mistakes in meta-analyses results \cite[]{greco2013meta}, mistakes in identifying diseases \cite[]{wray2012impact,thomas2018frequency}, defining ambiguous alleles \cite[]{chen2018prs}.
 For example, in one simulation scenario (``err'') of this paper, we show that having an extra layer of training consisting in stacking C+T models makes it possible to partially correct for mistakes. We have also remarked improved prediction for SCT when including ambiguous alleles for real phenotypes while maxCT would decrease (data not shown).
+[CITE CORRESPONDING PHENOTYPES]
+
+As for the SCT method itself, the stacking step can be used for either binary or continuous phenotypes. Yet, it makes sense to use age in the models, using for example Cox proportional-hazards model to predict age of disease onset, with possibly censored data \cite[]{cox1972regression}. 
+Cox models are not implemented yet as part as our efficient penalized regression implementation, only linear and logistic regressions are. This is an area of future development; at the moment, if sample size is not too large, one could use R package glmnet to implement stacking based on Cox model \cite[]{tibshirani2012strong}.
 
 \subsection{Conclusion}
 
