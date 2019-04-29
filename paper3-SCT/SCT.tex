@@ -95,7 +95,7 @@
 
 \section{Introduction}
 
-Clumping and Thresholding (C+T, also called P+T) is a simple technique for computing Polygenic Risk Scores (PRS) based on Genome-Wide Assocation Studies (GWAS) summary statistics, and has been used for more than ten years \cite[]{euesden2014prsice,purcell2009common}.
+Clumping and Thresholding (C+T, also called P+T) is a simple technique for computing Polygenic Risk Scores (PRS) based on Genome-Wide Association Studies (GWAS) summary statistics, and has been used for more than ten years \cite[]{euesden2014prsice,purcell2009common}.
 C+T consists in making a simple sum of allele counts (genotypes), weighted by effect sizes from GWAS summary statistics, after having restricted the variants included in this sum twice.
 The SNPs are first clumped (C) so that there remains only SNPs that are weakly correlated with each other ($S_{\text{clumping}}$). Clumping looks at the most significant SNP first, computes correlation between this index SNP and nearby SNPs (within some genetic distance $w_c$) and remove all the nearby SNPs that are correlated with this index SNP beyond a particular threshold $r_{c}^2$. 
 The clumping step aims at removing redundancy in included effects that is simply due to linkage disequilibrium (LD) between variants. Yet, this procedure may as well remove independently predictive variants in nearby regions.
@@ -111,7 +111,7 @@ Here, we show that these four hyper-parameters are really important, and that ch
 We implement an efficient way to compute scores for many different parameters in R package bigsnpr \cite[]{prive2017efficient}. 
 Moreover, instead of choosing the set of parameters that corresponds to the best prediction, we show that stacking all C+T scores by learning an optimal combination of them improves prediction beyond the best prediction of any of these scores \cite[]{breiman1996stacked}.
 We call this method SCT, which stands for Stacked Clumping and Thresholding.
-Using the UK Biobank data \cite[]{bycroft2017genome} and external summary statistics for simulated and real data analyses, we show that testing a larger grid of parameters consistently improves predictions as compared to using some default parameters for C+T. We also show that SCT consistenly improves predictions over any single C+T prediction.
+Using the UK Biobank data \cite[]{bycroft2017genome} and external summary statistics for simulated and real data analyses, we show that testing a larger grid of parameters consistently improves predictions as compared to using some default parameters for C+T. We also show that SCT consistently improves predictions over any single C+T prediction.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -155,7 +155,7 @@ Rheumatoid arthritis (RA) & ~~~~~5615 / 226,327 & ~~29,880 / ~~73,758 & ~~9,739,
 Type 1 diabetes (T1D) & ~~~~~~~771 / 314,547 & ~~~~~5913 / ~~~~~8828  & ~~8,996,866 & \cite{censin2017childhood} \\
 Type 2 diabetes (T2D) & ~~14,176 / 314,547 & ~~26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
 Prostate cancer (PRCA) & ~~~~~6643 / 141,321 & ~~79,148 / ~~61,106 & 20,370,946 & \cite{schumacher2018association} \\
-Depression (MDD) & ~~22,278 / 255,534 & ~~59,851 / 113,154 & 13,554,550 & \cite{wray2018genome} \\
+Depression (MDD) & ~~26,134 / 291,690 & ~~59,851 / 113,154 & 13,554,550 & \cite{wray2018genome} \\
 Coronary artery disease (CAD) & ~~12,263 / 225,927 & ~~60,801 / 123,504 & ~~9,455,778 & \cite{nikpay2015comprehensive} \\
 Asthma & ~~43,787 / 261,985 & ~~19,954 / 107,715 & ~~2,001,280 & \cite{demenais2018multiancestry} \\
   \hline
@@ -172,7 +172,7 @@ We compute C+T scores \textit{for each chromosome separately} and for many param
 \item Threshold on imputation INFO score within \{0.3, 0.6, 0.9, 0.95\}.
 \item Squared correlation threshold of clumping $r_{c}^2$ within \{0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95\}.
 \item Base size of clumping window within \{50, 100, 200, 500\}. $w_c$ is then computed as the base size divided by $r_{c}^2$. For example, for $r_{c}^2 = 0.2$, we test values of $w_c$ within \{250, 500, 1000, 2500\} (in kb). This is motivated by the fact that linkage disequilibrium is inversely proportional to genetic distance between variants \cite[]{pritchard2001linkage}.
-\item A sequence of 50 thresholds on p-values between 0.1 (-log10(p) = 1) and the most significant p-value, equaly spaced on a log-log scale.
+\item A sequence of 50 thresholds on p-values between 0.1 (-log10(p) = 1) and the most significant p-value, equally spaced on a log-log scale.
 \end{itemize}
 Thus, for individual $i$, chromosome $k$ and the four hyper-parameters info\_thr, $r_{c}^2$, $w_c$ and $p_T$, we compute
 \[\rm{V}_i^{(k)}(\text{info\_thr},~r_{c}^2,~w_c,~p_T) = \sum_{\substack{j ~\in~ \text{chromosome k} \\ \text{INFO}_j ~\geq~ \text{info\_thr} \\ j ~\in~ S_\text{clumping}(r_{c}^2,~w_c) \\ p_j~<~p_T}} \hat\beta_j \cdot G_{i,j}~,\] where $\hat\beta_j$ ($p_j$) are the effect sizes (p-values) estimated from the GWAS and $G_{i,j}$ is the dosage for individual $i$ and SNP $j$.
@@ -204,52 +204,28 @@ In all these scenarios, maxCT --that tests a much larger grid of hyper-parameter
 
 \subsection{Real summary statistics}
 
-In table \ref{tab:AUC}, we report AUC values on the test set (mean and 95\% CI from $10^4$ bootstrap samples) and the number of variants used in the final model.
+In figure \ref{fig:AUC-real} and table \ref{tab:AUC}, we report AUC values on the test set (mean and 95\% CI from $10^4$ bootstrap samples) and the number of variants used in the final model.
 
-\begin{table}[h]
-\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples) and the number of variants used in the final model.\label{tab:AUC}}
-\vspace*{0.5em}
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-  \hline
-Trait & stdCT & maxCT & SCT \\
-  \hline
-Breast cancer (BRCA) & 62.1 [60.5-63.6] & 63.3 [61.7-64.8] & 65.9 [64.4-67.4] \\
- & 6256 & 2572 & 670,050 \\
-Rheumatoid arthritis (RA) & 59.8 [57.7-61.8] & 60.3 [58.3-62.4] & 61.3 [59.1-63.4] \\
- & 12,220 & 88,556 & 317,456 \\
-Type 1 diabetes (T1D) & 75.4 [72.4-78.4] & 76.9 [73.9-79.7] & 78.7 [75.7-81.7] \\
- & 1112 & 267 & 135,991 \\
-Type 2 diabetes (T2D) & 59.5 [58.5-60.5] & 60.7 [59.8-61.6] & 63.8 [62.9-64.8] \\
- & 252 & 33,238 & 535,785 \\
-Prostate cancer (PRCA) &  \\
- &  \\
-Depression (MDD) & 53.9 [52.6-55.2] & 59.6 [58.3-60.8] & 59.8 [58.5-61.0] \\
- & 170,505 & 205,096 & 473,333 \\
-Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 63.9 [62.7-65.1] \\
- & 1182 & 87,577 & 315,165 \\
-Asthma \\
- &  \\
-   \hline
-\end{tabular}
-\end{table}
+
 
 [TALK ABOUT PARAMETERS FOR 10 BEST PREDICTIONS??]
 
-Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with some effects being largely unchanged, and others having an effect that is shrunk to 0 or completely 0, i.e.\ variants not included in the final model (Figure \ref{fig:eff-BRCA}).
+Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with some effects being largely unchanged, and others having an effect that is shrunk to 0 or completely 0, i.e.\ variants not included in the final model (Figures \ref{fig:neweffreal} and \ref{fig:neweffsimu}).
 [TALK ABOUT PARTICULAR CASES]
+[METTRE RESULTS FIG S2 AVANT?]
 
 
-
-\begin{figure}[htb]
-\centerline{\includegraphics[width=0.7\textwidth]{new-effects-BRCA.png}}
-\caption{Breast cancer. New effect sizes resulting from SCT versus initial effect sizes of GWAS. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
-\label{fig:eff-BRCA}
+\begin{figure}[h]
+\centerline{\includegraphics[width=0.8\textwidth]{AUC-real.pdf}}
+\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples). See corresponding values in table \ref{tab:AUC}.}
+\label{fig:AUC-real}
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Discussion}
+
+[TODO results]
 
 \subsection{Limitations of the study}
 
@@ -272,7 +248,7 @@ Yet, it makes sense to use age in the models, using for example Cox proportional
 Cox regression has already proven useful for increasing power in GWAS \cite[]{hughey2019cox}.
 Cox model is not implemented yet as part as our efficient penalized regression implementation, only linear and logistic regressions are. This is an area of future development; at the moment, if sample size is not too large, one could use R package glmnet to implement stacking based on Cox model \cite[]{tibshirani2012strong}.
 
-One might also want to use other information such as sex or ancestry (using principal components). Indeed, it is easy to add those in the stacking step as (unpenalized) variables in the penalized logistic regression. Yet, we have to be cautious doing so. For example, because prevalence of CAD is much higher in men than in women in the UKBB (8-9\% vs 2\%), adding sex in the model amount to fitting two different intercepts, centering distributions of fitted probabilities around prevalence [FIGURE]. This increases the AUC from 63.9\% to 74.4\% but results in a model that would classify all women as controls. A possible solution would be to report AUC figures for each gender separtely, or even to fit a model for each gender separately (in the stacking step).
+One might also want to use other information such as sex or ancestry (using principal components). Indeed, it is easy to add those in the stacking step as (unpenalized) variables in the penalized logistic regression. Yet, we have to be cautious doing so. For example, because prevalence of CAD is much higher in men than in women in the UKBB (8-9\% vs 2\%), adding sex in the model amount to fitting two different intercepts, centering distributions of fitted probabilities around disease prevalence (Figure \ref{fig:sexCAD}). This increases the AUC from 63.9\% to 74.4\% but results in a model that would classify all women as healthy. A possible solution would be to report AUC figures for each gender separately, or even to fit a model for each gender separately (in the stacking step).
 Fitting models separately would enable the use of sex chromosomes without introducing bias. 
 As for ancestry concerns, fitting different models for different ancestries might be a way to get more calibrated results and to account for differences in effect sizes and LD. 
 However, here for CAD, fitting two separate models results in a slight loss of predictive performance, while using variable `sex' does not change results when they are reported for each gender separately, with an AUC of 64.9\% [63.5-66.3] for men and 62.5\% [59.8-65.2] for women.
@@ -281,7 +257,7 @@ Thus, adding `sex' as a covariate in the model may provide a model with similar 
 
 \subsection{Conclusion}
 
-No 
+[TODO]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -314,6 +290,36 @@ This research has been conducted using the UK Biobank Resource under Application
 \caption{Comparison of estimated effect sizes (\textbf{A}) and Z-scores (\textbf{B}) if computed using a logistic regression with 10 principal components as covariates, or with a simple Cochran-Armitage additive test. Phenotypes were simulated using 100 causal SNPs only, allowing for large effects.}
 \label{fig:GWAS}
 \end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table}[h]
+\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples) and the number of variants used in the final model.\label{tab:AUC}}
+\vspace*{0.5em}
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+  \hline
+Trait & stdCT & maxCT & SCT \\
+  \hline
+Breast cancer (BRCA) & 62.1 [60.5-63.6] & 63.3 [61.7-64.8] & 65.9 [64.4-67.4] \\
+ & 6256 & 2572 & 670,050 \\
+Rheumatoid arthritis (RA) & 59.8 [57.7-61.8] & 60.3 [58.3-62.4] & 61.3 [59.1-63.4] \\
+ & 12,220 & 88,556 & 317,456 \\
+Type 1 diabetes (T1D) & 75.4 [72.4-78.4] & 76.9 [73.9-79.7] & 78.7 [75.7-81.7] \\
+ & 1112 & 267 & 135,991 \\
+Type 2 diabetes (T2D) & 59.5 [58.5-60.5] & 60.7 [59.8-61.6] & 63.8 [62.9-64.8] \\
+ & 252 & 33,238 & 535,785 \\
+Prostate cancer (PRCA) & & & \\
+ & & & \\
+Depression (MDD) & 53.9 [52.6-55.2] & 59.6 [58.3-60.8] & 59.8 [58.5-61.0] \\
+ & 170,505 & 205,096 & 473,333 \\
+Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 63.9 [62.7-65.1] \\
+ & 1182 & 87,577 & 315,165 \\
+Asthma & & & \\
+ & & & \\
+   \hline
+\end{tabular}
+\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -356,6 +362,7 @@ This research has been conducted using the UK Biobank Resource under Application
 \end{subfigure}
 
 \caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS in the first simulation of each simulation scenario. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
+\label{fig:neweffsimu}
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -452,6 +459,7 @@ This research has been conducted using the UK Biobank Resource under Application
 \end{subfigure}
 
 \caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS in real data applications. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
+\label{fig:neweffreal}
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -505,6 +513,14 @@ This research has been conducted using the UK Biobank Resource under Application
 \end{subfigure}
 
 \caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in real data applications. Facets are presenting different clumping thresholds $r_{c}^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
+\end{figure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[htb]
+\centerline{\includegraphics[width=0.8\textwidth]{dens-prob-CAD.png}}
+\caption{Distribution of predicted probabilities of Coronary Artery Disease (CAD) in the UK Biobank using SCT. Upper / lower panels corresponds to women / men. Left panels correspond to a model using C+T scores and variable `sex' when fitting penalized logistic regression in the stacking step. Right panels correspond to performing stacking of C+T scores without using variable `sex'.}
+\label{fig:sexCAD}
 \end{figure}
 
 \end{document}
