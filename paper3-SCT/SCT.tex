@@ -226,8 +226,8 @@ Prostate cancer (PRCA) &  \\
  &  \\
 Depression (MDD) & 53.9 [52.6-55.2] & 59.6 [58.3-60.8] & 59.8 [58.5-61.0] \\
  & 170,505 & 205,096 & 473,333 \\
-Coronary artery disease (CAD) & 60.1 [58.8-61.3] & 61.1 [59.9-62.4] & 63.9 [62.6-65.1] \\
- & 1112 & 79,793 & 282,565 \\
+Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 63.9 [62.7-65.1] \\
+ & 1182 & 87,577 & 315,165 \\
 Asthma \\
  &  \\
    \hline
@@ -264,11 +264,20 @@ Yet, there are two other established methods based on summary statistics: LDpred
 \subsection{Areas of improvement}
 
 There are many ways to improve prediction further. For example, developing techniques that can handle errors should be of great interest \cite[]{smith2011improving,bolin2014supervised}. There are many applications in medical data: mistakes in meta-analyses results \cite[]{greco2013meta}, mistakes in identifying diseases \cite[]{wray2012impact,thomas2018frequency}, defining ambiguous alleles \cite[]{chen2018prs}.
-For example, in one simulation scenario (``err'') of this paper, we show that having an extra layer of training consisting in stacking C+T models makes it possible to partially correct for mistakes. We have also remarked improved prediction for SCT when including ambiguous alleles for real phenotypes while maxCT would decrease (data not shown).
-[CITE CORRESPONDING PHENOTYPES]
+For example, in one simulation scenario (``err'') of this paper, we show that having an extra layer of training consisting in stacking C+T models makes it possible to partially correct for mistakes. 
+%We have also remarked improved prediction for SCT when including ambiguous alleles for real phenotypes while maxCT would decrease (data not shown). [CITE CORRESPONDING PHENOTYPES]
 
-As for the SCT method itself, the stacking step can be used for either binary or continuous phenotypes. Yet, it makes sense to use age in the models, using for example Cox proportional-hazards model to predict age of disease onset, with possibly censored data \cite[]{cox1972regression}. 
-Cox models are not implemented yet as part as our efficient penalized regression implementation, only linear and logistic regressions are. This is an area of future development; at the moment, if sample size is not too large, one could use R package glmnet to implement stacking based on Cox model \cite[]{tibshirani2012strong}.
+As for the SCT method itself, the stacking step can be used for either binary or continuous phenotypes. 
+Yet, it makes sense to use age in the models, using for example Cox proportional-hazards model to predict age of disease onset, with possibly censored data \cite[]{cox1972regression}.
+Cox regression has already proven useful for increasing power in GWAS \cite[]{hughey2019cox}.
+Cox model is not implemented yet as part as our efficient penalized regression implementation, only linear and logistic regressions are. This is an area of future development; at the moment, if sample size is not too large, one could use R package glmnet to implement stacking based on Cox model \cite[]{tibshirani2012strong}.
+
+One might also want to use other information such as sex or ancestry (using principal components). Indeed, it is easy to add those in the stacking step as (unpenalized) variables in the penalized logistic regression. Yet, we have to be cautious doing so. For example, because prevalence of CAD is much higher in men than in women in the UKBB (8-9\% vs 2\%), adding sex in the model amount to fitting two different intercepts, centering distributions of fitted probabilities around prevalence [FIGURE]. This increases the AUC from 63.9\% to 74.4\% but results in a model that would classify all women as controls. A possible solution would be to report AUC figures for each gender separtely, or even to fit a model for each gender separately (in the stacking step).
+Fitting models separately would enable the use of sex chromosomes without introducing bias. 
+As for ancestry concerns, fitting different models for different ancestries might be a way to get more calibrated results and to account for differences in effect sizes and LD. 
+However, here for CAD, fitting two separate models results in a slight loss of predictive performance, while using variable `sex' does not change results when they are reported for each gender separately, with an AUC of 64.9\% [63.5-66.3] for men and 62.5\% [59.8-65.2] for women.
+Thus, adding `sex' as a covariate in the model may provide a model with similar discrimination and with better calibration of probabilities (if prevalence in the data is representative of prevalence in the population). Yet, we would like to emphasize again that reporting one AUC figure for all individuals would be misleading in the case of using variable `sex' in the model.
+
 
 \subsection{Conclusion}
 
