@@ -96,7 +96,7 @@
 \section{Introduction}
 
 Clumping and Thresholding (C+T, also called P+T) is a simple technique for computing Polygenic Risk Scores (PRS) based on Genome-Wide Association Studies (GWAS) summary statistics, and has been used for more than ten years \cite[]{euesden2014prsice,purcell2009common}.
-C+T consists in making a simple sum of allele counts (genotypes), weighted by effect sizes from GWAS summary statistics, after having restricted the variants included in this sum twice.
+C+T consists in making a simple sum of allele counts (genotypes), weighted by effect sizes from GWAS summary statistics, after having restricted the variants included in this sum, twice.
 The SNPs are first clumped (C) so that there remains only SNPs that are weakly correlated with each other ($S_{\text{clumping}}$). Clumping looks at the most significant SNP first, computes correlation between this index SNP and nearby SNPs (within some genetic distance $w_c$) and remove all the nearby SNPs that are correlated with this index SNP beyond a particular threshold $r_{c}^2$. 
 The clumping step aims at removing redundancy in included effects that is simply due to linkage disequilibrium (LD) between variants. Yet, this procedure may as well remove independently predictive variants in nearby regions.
 Thresholding (T) consists in removing SNPs that are under a chosen level of significance ($p > p_T$), which aims at reducing noise in the score.
@@ -108,8 +108,8 @@ A liberal inclusion of variants is often accepted, with the assumption that the 
 Here, we consider this threshold on quality of imputation (often called the INFO score) as a fourth parameter of the C+T method.
 
 Here, we show that these four hyper-parameters are really important, and that choosing those hyper-parameters well could substantially increase the predictive power of C+T over using current default parameters.
-We implement an efficient way to compute scores for many different parameters in R package bigsnpr \cite[]{prive2017efficient}. 
-Moreover, instead of choosing the set of parameters that corresponds to the best prediction, we show that stacking all C+T scores by learning an optimal combination of them improves prediction beyond the best prediction of any of these scores \cite[]{breiman1996stacked}.
+We implement an efficient way to compute C+T scores for many different parameters in R package bigsnpr \cite[]{prive2017efficient}. 
+Moreover, instead of choosing the set of parameters that corresponds to the best prediction, we use stacking, i.e.\ we learn an optimal combination of all C+T scores to improve prediction beyond the best prediction of any of these scores \cite[]{breiman1996stacked}.
 We call this method SCT, which stands for Stacked Clumping and Thresholding.
 Using the UK Biobank data \cite[]{bycroft2017genome} and external summary statistics for simulated and real data analyses, we show that testing a larger grid of parameters consistently improves predictions as compared to using some default parameters for C+T. We also show that SCT consistently improves predictions over any single C+T prediction.
 
@@ -194,7 +194,12 @@ Note that stdCT and maxCT use the same set of parameters for all chromosomes, i.
 \subsection{Simulations}
 
 We test 6 different simulations scenarios. 
-In all these scenarios, maxCT --that tests a much larger grid of hyper-parameters values for C+T on the training set-- consistently provides higher AUC values on the test set as compared to stdCT that tests only a limited  of hyper-parameters values. In these scenarios, SCT provides equal or higher predictive performance than maxCT. In the first three simple scenarios simulating 100, 10K or 1M causal SNPs anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, smaller effects on chromosome 2 and no effect on other chromosomes, mean AUC is 0.787 for maxCT and 0.822 for SCT, which is an absolute increase of 4.5\%. In the ``err'' scenario where we report GWAS summary statistics with 10\% reversed effects (errors), mean AUC is 0.702 for maxCT and 0.732 for SCT, which is an absolute increase of 3\%.
+In all these scenarios, maxCT --that tests a much larger grid of hyper-parameters values for C+T on the training set-- consistently provides higher AUC values on the test set as compared to stdCT that tests only a limited  of hyper-parameters values. 
+The absolute improvement in AUC of maxCT over stdCT is particularly large in the cases of 100 and 10,000 causal SNPs, where causal effects are mostly independent of one another. 
+In these cases, using a very stringent $r_{c}^2 = 0.01$ threshold of clumping provides higher predictive performance than using a standard default of $r_{c}^2 = 0.2$ (Figures \ref{fig:simugridA} and \ref{fig:simugridB}). However, $r_{c}^2 = 0.2$ seems to be an appropriate default when simulating 1M causal variants, but still the default window size is not large enough and an increasing window size increases AUC (Figure \ref{fig:simugridC}).
+
+As for SCT, it provides equal or higher predictive performance than maxCT in simulation scenarios. In the first three simple scenarios simulating 100, 10K or 1M causal SNPs anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, smaller effects on chromosome 2 and no effect on other chromosomes, mean AUC is 0.787 for maxCT and 0.822 for SCT, which is an absolute increase of 4.5\%. In the ``err'' scenario where we report GWAS summary statistics with 10\% reversed effects (errors), mean AUC is 0.702 for maxCT and 0.732 for SCT, which is an absolute increase of 3\%.
+
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=0.8\textwidth]{AUC-simus.pdf}}
@@ -371,17 +376,17 @@ Asthma & & & \\
 \centering
 \begin{subfigure}[b]{\textwidth}
 \includegraphics[width=\textwidth]{grid-simu100.png}
-\caption{100 random causal SNPs}
+\caption{100 random causal SNPs\label{fig:simugridA}}
 \end{subfigure}
 \\~\\~\\
 \begin{subfigure}[b]{\textwidth}
 \includegraphics[width=\textwidth]{grid-simu10K.png}
-\caption{10,000 random causal SNPs}
+\caption{10,000 random causal SNPs\label{fig:simugridB}}
 \end{subfigure}
 \\~\\~\\
 \begin{subfigure}[b]{\textwidth}
 \includegraphics[width=\textwidth]{grid-simu1M.png}
-\caption{all 1M SNPs are causal SNPs}
+\caption{all 1M SNPs are causal SNPs\label{fig:simugridC}}
 \end{subfigure}
 \end{figure}
 
