@@ -8,14 +8,14 @@ Type 1 diabetes (T1D) & 75.4 [72.4-78.4] & 76.9 [73.9-79.7] & 78.7 [75.7-81.7] \
 & 1112 & 267 & 135,991 \\
 Type 2 diabetes (T2D) & 59.5 [58.5-60.5] & 60.7 [59.8-61.6] & 63.8 [62.9-64.8] \\
 & 252 & 33,238 & 535,785 \\
-Prostate cancer (PRCA) & & & \\
-& & & \\
-Depression (MDD) & 53.9 [52.6-55.2] & 59.6 [58.3-60.8] & 59.8 [58.5-61.0] \\
-& 170,505 & 205,096 & 473,333 \\
+Prostate cancer (PRCA) & 68.0 [66.5-69.5] & 69.3 [67.8-70.8] & 71.7 [70.2-73.1] \\
+& 1035 & 356 & 696,575 \\
+Depression (MDD) & 55.7 [54.4-56.9] & 59.2 [58.0-60.4] & 59.5 [58.2-60.7] \\
+& 165,584 & 222,912 & 524,099 \\
 Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 63.9 [62.7-65.1] \\
 & 1182 & 87,577 & 315,165 \\
-Asthma & & & \\
-& & & \\" %>%
+Asthma & 56.8 [56.2-57.5] & 57.3 [56.7-58.0] & 60.7 [60.0-61.3] \\
+& 3034 & 360 & 446,120 \\" %>%
   scan(text = ., what = "", sep = "\\") %>%
   scan(text = ., what = "", sep = "&") %>%
   trimws() %>%
@@ -35,8 +35,8 @@ Asthma & & & \\
   geom_col(position = position_dodge(), alpha = 0.5, color = "black", size = 1) +
   geom_errorbar(aes(ymin = inf, ymax = sup), position = position_dodge(width = 0.9),
                 color = "black", width = 0.2, size = 1) +
-  scale_y_continuous(limits = c(0.5, NA), minor_breaks = 0:50 / 50,
-                     oob = scales::rescale_none) +
-  theme(legend.position = c(0.7, 0.8))
+  scale_y_continuous(limits = c(0.5, NA), oob = scales::rescale_none,
+                     breaks = 0:10 / 10, minor_breaks = 0:50 / 50) +
+  theme(legend.position = c(0.8, 0.8))
 
 ggsave("figures/AUC-real.pdf", width = 750, height = 500, scale = 1 / 100)

@@ -143,7 +143,7 @@ As in simulations, we restrict individuals to the ones referred as of White Brit
 As some reproducible code is worth a thousand words, we invite the reader to look at our analysis code to see how we define phenotypes in the UK Biobank; we summarize the number of cases and controls for each phenotype in table \ref{tab:sumstats}.
 
 \begin{table}[h]
-\caption{Available cases and controls in UK Biobank (UKBB) for many binary traits, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS we use here.\label{tab:sumstats}}
+\caption{Available cases and controls in UK Biobank (UKBB) for many binary traits, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS we use here.[TODO:RERUN]\label{tab:sumstats}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|c|}
@@ -155,14 +155,14 @@ Rheumatoid arthritis (RA) & ~~~~~5615 / 226,327 & ~~29,880 / ~~73,758 & ~~9,739,
 Type 1 diabetes (T1D) & ~~~~~~~771 / 314,547 & ~~~~~5913 / ~~~~~8828  & ~~8,996,866 & \cite{censin2017childhood} \\
 Type 2 diabetes (T2D) & ~~14,176 / 314,547 & ~~26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
 Prostate cancer (PRCA) & ~~~~~6643 / 141,321 & ~~79,148 / ~~61,106 & 20,370,946 & \cite{schumacher2018association} \\
-Depression (MDD) & ~~26,134 / 291,690 & ~~59,851 / 113,154 & 13,554,550 & \cite{wray2018genome} \\
+Depression (MDD) & ~~22,287 / 255,317 & ~~59,851 / 113,154 & 13,554,550 & \cite{wray2018genome} \\
 Coronary artery disease (CAD) & ~~12,263 / 225,927 & ~~60,801 / 123,504 & ~~9,455,778 & \cite{nikpay2015comprehensive} \\
 Asthma & ~~43,787 / 261,985 & ~~19,954 / 107,715 & ~~2,001,280 & \cite{demenais2018multiancestry} \\
   \hline
 \end{tabular}
 \end{table}
 
-We keep all variants with a GWAS p-value lower than 0.1. 
+We keep all variants with a GWAS p-value lower than 0.1. [TODO: EXCEPT FOR]
 To match remaining summary statistics with data from the UK Biobank, we first remove ambiguous alleles [A/T] and [C/G]. We then augment the summary statistics twice: first by adding copied rows with the complementary alleles, then by adding copied rows with reverse alleles and effects. Finally, we use an inner join on the combination of chromosome, position and the two alleles to match these augmented summary statistics with data from the UK Biobank. Note that, when there are no or very few alleles that are flipped, we disable the strand flipping option and therefore do not remove ambiguous alleles.
 
 \subsection{Clumping and Thresholding (C+T) and Stacked C+T (SCT)}
@@ -314,14 +314,14 @@ Type 1 diabetes (T1D) & 75.4 [72.4-78.4] & 76.9 [73.9-79.7] & 78.7 [75.7-81.7] \
  & 1112 & 267 & 135,991 \\
 Type 2 diabetes (T2D) & 59.5 [58.5-60.5] & 60.7 [59.8-61.6] & 63.8 [62.9-64.8] \\
  & 252 & 33,238 & 535,785 \\
-Prostate cancer (PRCA) & & & \\
- & & & \\
-Depression (MDD) & 53.9 [52.6-55.2] & 59.6 [58.3-60.8] & 59.8 [58.5-61.0] \\
- & 170,505 & 205,096 & 473,333 \\
+Prostate cancer (PRCA) & 68.0 [66.5-69.5] & 69.3 [67.8-70.8] & 71.7 [70.2-73.1] \\
+ & 1035 & 356 & 696,575 \\
+Depression (MDD) & 55.7 [54.4-56.9] & 59.2 [58.0-60.4] & 59.5 [58.2-60.7] \\
+ & 165,584 & 222,912 & 524,099 \\
 Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 63.9 [62.7-65.1] \\
  & 1182 & 87,577 & 315,165 \\
-Asthma & & & \\
- & & & \\
+Asthma & 56.8 [56.2-57.5] & 57.3 [56.7-58.0] & 60.7 [60.0-61.3] \\
+ & 3034 & 360 & 446,120 \\
    \hline
 \end{tabular}
 \end{table}
