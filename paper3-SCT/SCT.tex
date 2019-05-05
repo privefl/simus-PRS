@@ -247,23 +247,42 @@ Effects resulting from SCT have mostly the same sign as initial effects from GWA
 
 \section{Discussion}
 
-[TODO results]
+\subsection{Predictive performance improvement of C+T}
+
+C+T is a widely-used method for computing PRS. 
+C+T is considered as a simple technique because it directly uses effects from GWAS regression coefficients and that it simply discards SNPs in LD instead of accounting for LD in a more optimal way \cite[]{vilhjalmsson2015modeling}. 
+The popularity of this method may be due to both PLINK and PRSice, two pieces of software that make it easy to apply C+T \cite[]{purcell2007plink,euesden2014prsice,chang2015second}.
+
+In this paper, we show that this method has at least 4 hyper-parameters to choose (minor allele frequency might be a fifth one) and we provide some efficient software to compute C+T scores for many combinations of these parameters.
+Using simulated and real data, we show that choosing different values rather than default ones for these hyper-parameters has the potential to substantially improves performance of C+T.
+We cannot test all possible combinations of these parameters, but it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include SNPs with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures \ref{fig:grid-RA} and \ref{fig:grid-MDD}). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure \ref{fig:grid-CAD}).
+
+Using this large grid of C+T scores for many different hyper-parameters, we show that stacking these scores instead of choosing the best one improves prediction further \cite[]{breiman1996stacked}.
+You may see SCT as a metaGRS pushed to the limit \cite[]{inouye2018genomic}.
+Normally, cross-validation should be used to prevent overfitting when using stacking and it is also suggested to use positivity constraints in stacking \cite[]{breiman1996stacked}.
+However, cross-validation is not necessary here since building C+T scores does not make use of the phenotype of the training set that is later used in the stacking.
+Moreover, we allow C+T scores to have negative weights in the final model. We think it makes sense to do so for three reasons. First, because C+T scores are overlapping, negative weights makes it possible to only weight groups of SNPs that are ``in the middle''. Second, because of LD, some SNPs might have different effects when learned jointly with others (Figures \ref{fig:neweff1M} and \ref{fig:neweffHLA}). Third, if reported GWAS effects are merely different in the data we compute the PRS, for example when applying SCT in different population as the GWAS,  having SNPs with opposite effects might help adapting the GWAS effects (Figure \ref{fig:newefferr}).
+[NOT SO CLEAR..]
 
 \subsection{Limitations of the study}
 
-We analyze 8 different binary phenotypes in this study; there are more to be analyzed. For example, for psychiatric disease, we include only depression (MDD) because diseases such as schyzophrenia and bipolar disorder have very few cases in the UK Biobank; dedicated datasets should be used to assess effectiveness of maxCT and SCT for such diseases. 
-We also do not analyze many automimmune diseases as summary statistics are often outdated\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/} and, because there are usually large effects on chromosome 6, methods that use individual-level data are likely to provide better predictive models \cite[]{prive2019efficient}.
+We analyze 8 different binary phenotypes in this study, but there are more to be analyzed. For example, for psychiatric disease, we include only depression (MDD) because diseases such as schyzophrenia and bipolar disorder have very few cases in the UK Biobank; dedicated datasets should be used to assess effectiveness of maxCT and SCT for such diseases. 
+We also do not analyze many automimmune diseases as summary statistics are often outdated\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/} and, because there are usually large effects on chromosome 6, methods that use individual-level data instead of summary statistics are likely to provide better predictive models \cite[]{prive2019efficient}.
 We also voluntarily do not analyze any continuous trait such as height or BMI because there are many individual-level data available for such phenotypes and methods directly using individual-level data are likely to provide better predictive models than the ones using summary statistics \cite[]{prive2019efficient}. 
-Phenotypes with minuscule effects such as educational attainment for which huge GWAS summary statistics are available might be an exception \cite[]{lee2018gene}.
+Phenotypes with tiny effects such as educational attainment for which huge GWAS summary statistics are available might be an exception \cite[]{lee2018gene}.
 
 Moreover, we focus this study on improving the C+T method. The C+T method is by far the simplest and most widely-used method for constructing polygenic risk scores based on summary statistics. The idea behind C+T is really simple because it directly uses weights learned from GWAS; it further removes SNPs as one does when reporting hits from GWAS, i.e.\ only SNPs that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported. 
-Yet, there are two other established methods based on summary statistics: LDpred and lassosum, but do not provide much better predictions as compared to stdCT \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Other methods are emerging such as ...; they are not very easy to use, nor easy to understand, nor they perform much better than stdCT. [CITE OTHERS?? BE NICE??]
+Yet, there are two other established methods based on summary statistics, LDpred and lassosum \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Several other recent methods such as NPS, PRS-CS and SBayesR are being developed \cite[]{chun2019non,ge2019polygenic,lloyd2019improved}.
+Some methods require only a small reference panel to account for LD while some methods have a phase of retraining that needs a training set with individual-level data and phenotypes (SCT, NPS and lassosum).
+A full comparison of methods (including individual-level data methods), including binary and continuous traits with different architectures, using different sizes of summary statistics and individual-level data for training, and in possibly different populations would make a fantastic paper. 
+Indeed, we believe that different methods may perform very differently in different settings and that understanding in which case which method works best is a key need if we want to maximize the utility of PRS.
+
 
 \subsection{Areas of improvement}
 
-There are many ways to improve prediction further. For example, developing techniques that can handle errors should be of great interest \cite[]{smith2011improving,bolin2014supervised}. There are many applications in medical data: mistakes in meta-analyses results \cite[]{greco2013meta}, mistakes in identifying diseases \cite[]{wray2012impact,thomas2018frequency}, defining ambiguous alleles \cite[]{chen2018prs}.
-For example, in one simulation scenario (``err'') of this paper, we show that having an extra layer of training consisting in stacking C+T models makes it possible to partially correct for mistakes. 
-%We have also remarked improved prediction for SCT when including ambiguous alleles for real phenotypes while maxCT would decrease (data not shown). [CITE CORRESPONDING PHENOTYPES]
+There are many ways to improve prediction further. For example, developing techniques that can handle errors should be of great interest \cite[]{smith2011improving,bolin2014supervised}. There are many applications in medical data.
+First, there can be mistakes in meta-analyses results \cite[]{greco2013meta}, mistakes in disease diagnostic \cite[]{wray2012impact,thomas2018frequency}, imprecisions in data, or defining ambiguous alleles \cite[]{chen2018prs}. [MORE DETAILS + REFS]
+For example, in one simulation scenario (``err'') of this paper, we show that having an extra layer of training consisting in stacking C+T models makes it possible to partially correct for mistakes.
 
 As for the SCT method itself, the stacking step can be used for either binary or continuous phenotypes. 
 Yet, it makes sense to use age in the models, using for example Cox proportional-hazards model to predict age of disease onset, with possibly censored data \cite[]{cox1972regression}.
@@ -279,7 +298,15 @@ Thus, adding `sex' as a covariate in the model may provide a model with similar 
 
 \subsection{Conclusion}
 
-[TODO]
+We focus this paper on improving the widely-used C+T method by testing a wide-range of hyper-parameters values. More broadly, we believe that any implementation of statistical methods should come with an easy and effective way to choose hyper-parameters of these methods well. 
+We believe that C+T will continue to be used for many years as it is both simple to use and to understand. 
+Moreover, it remains an effective method since it can adapt to many different disease architectures by choosing hyper-parameters well.
+Instead of choosing one set of hyper-parameters, we show that stacking C+T predictions further improves predictive performance. 
+There are many advantages of SCT over any single C+T prediction: first, it can learn different architecture models for different chromosomes, it can learn a mixture of large and small effects and it can more generally adapt initial weights of the GWAS in order to maximize prediction.
+Moreover, model resulting from SCT, as a linear combination (stacking) of linear combinations (C+T scores), it remains a simple linear model with one vector of coefficients. 
+As logistic regression is used for stacking C+T scores for binary traits, resulting predictions returns probabilities, if one needs usually better calibrated models. [REWORD]
+
+[WHAT ELSE?]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -384,7 +411,7 @@ Asthma                        & 2500    & 0.2  & 0.90 & 2.2e-04 \\
 \centering
 \begin{subfigure}[b]{0.7\textwidth}
 \includegraphics[width=\textwidth]{new-effects-simu1M.png}
-\caption{all 1M SNPs are causal SNPs}
+\caption{all 1M SNPs are causal SNPs\label{fig:neweff1M}}
 \end{subfigure}
 \\~\\~\\
 \begin{subfigure}[b]{0.7\textwidth}
@@ -397,12 +424,12 @@ Asthma                        & 2500    & 0.2  & 0.90 & 2.2e-04 \\
 \centering
 \begin{subfigure}[b]{0.7\textwidth}
 \includegraphics[width=\textwidth]{new-effects-simuerr.png}
-\caption{10,000 random causal SNPs, but 10\% of the GWAS effects are reported with an opposite effect}
+\caption{10,000 random causal SNPs, but 10\% of the GWAS effects are reported with an opposite effect\label{fig:newefferr}}
 \end{subfigure}
 \\~\\~\\
 \begin{subfigure}[b]{0.7\textwidth}
 \includegraphics[width=\textwidth]{new-effects-simuHLA.png}
-\caption{7105 causal SNPs in a long-range LD region of chromosome 6.}
+\caption{7105 causal SNPs in a long-range LD region of chromosome 6.\label{fig:neweffHLA}}
 \end{subfigure}
 
 \caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS in the first simulation of each simulation scenario. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
@@ -517,7 +544,7 @@ Asthma                        & 2500    & 0.2  & 0.90 & 2.2e-04 \\
 \\~\\
 \begin{subfigure}[b]{\textwidth}
 \includegraphics[width=\textwidth]{grid-RA.png}
-\caption{Rheumatoid arthritis}
+\caption{Rheumatoid arthritis\label{fig:grid-RA}}
 \end{subfigure}
 \\~\\
 \begin{subfigure}[b]{\textwidth}
@@ -548,7 +575,7 @@ Asthma                        & 2500    & 0.2  & 0.90 & 2.2e-04 \\
 \centering
 \begin{subfigure}[b]{\textwidth}
 \includegraphics[width=\textwidth]{grid-CAD.png}
-\caption{Coronary artery disease}
+\caption{Coronary artery disease\label{fig:grid-CAD}}
 \end{subfigure}
 \\~\\
 \begin{subfigure}[b]{\textwidth}
