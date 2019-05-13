@@ -1,73 +1,64 @@
+# bim <- bigreadr::fread2("data/data_train.bim")
+# bigreadr::fwrite2(bim, "data/data_train.bim", sep = "\t", col.names = FALSE)
+writeLines(readLines("data/data_train.bim", n = 5))
+
 sumstats <- bigreadr::fread2("data/sumstats.txt")
-
-library(dplyr)
-sumstats %>%
-  select(hg19chrc = chromosome, snpid = rsid,
-         a1 = allele1, a2 = allele2, bp = physical.pos,
-         or = beta, p = pval) %>%
-  mutate(hg19chrc = paste0("chr", hg19chrc), or = exp(or),
-         snpid = bigreadr::fread2("data/data_train.bim", select = 2)[[1]]) %>%
-  bigreadr::fwrite2("SUM_STATS_FILE.txt", sep = "\t")
-
-readLines("SUM_STATS_FILE.txt", n = 5)
-# [1] "hg19chrc\tsnpid\ta1\ta2\tbp\tor\tp"
-# [2] "chr6\t6:202076_AG_A\tAG\tA\t202076\t0.960642839169572\t0.333452277652367"
-# [3] "chr6\t6:202777_C_T\tC\tT\t202777\t0.960338117401514\t0.329510213501189"
-# [4] "chr6\trs11757325\tC\tT\t203397\t1.00843386744862\t0.846133552351405"
-# [5] "chr6\trs80014302\tT\tG\t203722\t0.960019650560543\t0.325411512307528"
-
-# famfile <- "data/data_test.fam"
-# famfile %>%
-#   bigreadr::fread2() %>%
-#   mutate(V6 = V6 + 1) %>%
-#   bigsnpr:::write.table2(famfile)
+# sumstats$N <- 40e3
+# sumstats$rsid <- bigreadr::fread2("data/data_train.bim", select = 2)[[1]]
+# bigreadr::fwrite2(sumstats, "data/sumstats.txt", sep = "\t")
+writeLines(readLines("data/sumstats.txt", n = 5))
 
 reticulate::use_python("/home/privef/anaconda3/bin/python3")
 reticulate::py_config()
 stopifnot(system("python3 --version", intern = TRUE) == "Python 3.7.0")
+# system("~/anaconda3/bin/pip install --user --upgrade pip")
+# system("~/anaconda3/bin/pip install --user plinkio")
+# system("~/anaconda3/bin/pip install --user ldpred")
 ldpred <- "../ldpred/LDpred.py"
 unlink("OUT_COORD_FILE.hdf5")
+# system(glue::glue("python3 {ldpred} coord --help"))
 system(glue::glue(
   "python3 {ldpred} coord",
   " --gf data/data_train",
-  " --ssf SUM_STATS_FILE.txt --ssf-format BASIC",
-  " --N {bigreadr::nlines('data/data_gwas.fam')}",
+  " --ssf data/sumstats.txt",
+  " --maf 0 --skip-coordination",
+  " --rs rsid --A1 allele1 --A2 allele2 --pos physical.pos --chr chromosome",
+  " --pval pval --eff beta --beta",
+  " --N 40000 --case-n 4000 --control-n 36000",
   " --out OUT_COORD_FILE.hdf5"
 ))
-# How to control which are excluded?
-# --skip-coordination
-# --maf 0
 
+# ------------------------------ Summary statistics ------------------------------
+# Num SNPs parsed from sum stats file                                       685920
+# --------------------------------- Coordination ---------------------------------
+# Num individuals in LD Reference data:                                       8000
+# SNPs in LD Reference data:                                                686066
+# Num chromosomes used:                                                          2
+# SNPs common across datasets:                                              685395
+# SNPs retained after filtering:                                            547355
+# SNPs w ambiguous nucleotides filtered:                                     97820
+# SNPs w other nucleotide discrepancies filtered:                            40220
+# SNPs w allele freq discrepancy > 0.100 filtered:                               0
 
+# system(glue::glue("python3 {ldpred} gibbs --help"))
+unlink("LD_FILE_ldradius*")
 system.time(
   system(glue::glue(
     "python3 {ldpred} gibbs",
     " --cf OUT_COORD_FILE.hdf5",
-    " --ldr {round(bigreadr::nlines('data/data_gwas.bim') / 3000)}",
+    " --ldr 1000",
     " --ldf LD_FILE",
-    " --f 0.01",
-    " --N {bigreadr::nlines('data/data_gwas.fam')}",
+    # " --f 0.01",
+    " --h2 0.5",
+    " --N 40000",
     " --out OUT_WEIGHTS_FILE"
   ))
-) # 12 min
-
-# Evaluate without LDpred
-weights <- bigreadr::fread2("OUT_WEIGHTS_FILE_LDpred_p1.0000e-02.txt")
-weights <- bigreadr::fread2("OUT_WEIGHTS_FILE_LDpred-inf.txt")
-stopifnot(!any(duplicated(weights$sid)))
+) # MemoryError
 
 train <- snp_attach("data/data_train.rds")
-ind <- match(weights$sid, train$map$marker.ID)
-all.equal(sumstats$beta[ind], weights$raw_beta)
-prs.train <- big_prodVec(train$genotypes, weights$ldpred, ind.col = ind)
-AUC(prs.train, train$fam$affection - 1)  # 60.8 with 0.01 -> 65.0 with Inf
-
-test <- snp_attach("data/data_test.rds")
-prs.test <- big_prodVec(test$genotypes, weights$ldpred, ind.col = ind)
-AUC(prs.test, test$fam$affection)  # 58.7 with 0.01 -> 64.9 with Inf
-
 maf <- snp_MAF(train$genotypes, ind.col = ind)
 plot(maf, weights$ldpred, pch = 20)
+# test <- snp_attach("data/data_test.rds")
 
 # Evaluate with LDpred
 system(glue::glue(
@@ -76,27 +67,25 @@ system(glue::glue(
   " --rf OUT_WEIGHTS_FILE",
   " --out OUT_SCORE_FILE"
 ))
+sapply(list.files(pattern = "^OUT_SCORE_FILE_LDpred.*\\.txt$"), function(file) {
+  bigreadr::fread2(file) %>%
+  { AUC(.$PRS, .$true_phens) }
+})
 
 writeLines(readLines("OUT_SCORE_FILE_LDpred-inf.txt", n = 5))
-scores <- readLines("OUT_SCORE_FILE_LDpred-inf.txt") %>%
-  gsub(", ", " ", .) %>%
-  trimws() %>%
-  data.table::fread(text = ., data.table = FALSE)
-AUC(scores$raw_effects_prs, scores$true_phens - 1) # 63.3
-AUC(scores$pval_derived_effects_prs, scores$true_phens - 1) # 35.1?
-plot(prs.test, scores$pval_derived_effects_prs, pch = 20)
-plot(scores$raw_effects_prs, scores$pval_derived_effects_prs, pch = 20)
+scores <- bigreadr::fread2("OUT_SCORE_FILE_LDpred-inf.txt")
+AUC(scores$PRS, scores$true_phens) # 65.8
 
 # P+T
 system.time(
   system(glue::glue(
     "python3 {ldpred} p+t",
     " --cf OUT_COORD_FILE.hdf5",
-    " --ldr {round(bigreadr::nlines('data/data_gwas.bim') / 3000)}",
+    " --ldr {round(bigreadr::nlines('data/data_train.bim') / 3000)}",
     " --r2 0.05",
     " --out OUT_WEIGHTS_FILE"
   ))
-) # 12 min
+) # 5 min
 
 # Evaluate with LDpred
 system(glue::glue(
@@ -107,3 +96,10 @@ system(glue::glue(
   " --r2 0.05",
   " --out OUT_SCORE_FILE"
 ))
+
+sapply(list.files(pattern = "^OUT_SCORE_FILE_P\\+T_p.*\\.txt$"), function(file) {
+  bigreadr::fread2(file) %>%
+  { AUC(.$PRS, .$true_phens) }
+})
+
+
