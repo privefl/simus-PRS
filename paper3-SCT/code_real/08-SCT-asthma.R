@@ -1,6 +1,6 @@
-download.file("ftp://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/DemenaisF_29273806_GCST006862/TAGC_meta-analyses_results_for_asthma_risk.zip",
-              destfile = "sumstats_asthma.zip")
-unzip("sumstats_asthma.zip")
+# download.file("ftp://ftp.ebi.ac.uk/pub/databases/gwas/summary_statistics/DemenaisF_29273806_GCST006862/TAGC_meta-analyses_results_for_asthma_risk.zip",
+#               destfile = "sumstats_asthma.zip")
+# unzip("sumstats_asthma.zip")
 library(bigreadr)
 sumstats <- fread2(
   "TAGC meta-analyses results for asthma risk/TAGC_Multiancestry_and_European-Ancestry_Meta-analyses_Results.tsv",
@@ -94,8 +94,8 @@ file.size(G$backingfile) / 1024^3  # 288 GB
 CHR <- as.integer(ukbb$map$chromosome)
 POS <- ukbb$map$physical.pos
 
-set.seed(1)
-ind.train <- sort(sample(length(sub), 250e3))
+set.seed(1); ind.train <- sort(sample(length(sub), 250e3))
+# set.seed(2); ind.train <- c(sample(which(y.sub == 0), 2000), sample(which(y.sub == 1), 500))
 ind.test <- setdiff(seq_along(sub), ind.train)
 
 system.time(
@@ -104,7 +104,7 @@ system.time(
     grid.thr.imp = c(0.3, 0.6, 0.9, 0.95),
     grid.thr.r2 = c(0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95),
     grid.base.size = c(50, 100, 200, 500),
-    ncores = NCORES
+    ncores = 5
   )
 ) # 4.3H
 
@@ -117,7 +117,7 @@ system.time(
 
 system.time(
   final_mod <- snp_grid_stacking(
-    multi_PRS, y.sub[ind.train], ncores = NCORES, n.abort = 3
+    multi_PRS, y.sub[ind.train], ncores = NCORES
   )
 ) # 12H
 mod <- final_mod$mod
@@ -143,7 +143,7 @@ summary(new_beta[which(sign(new_beta * beta) < 0)])
 pred <- final_mod$intercept +
   big_prodVec(G, new_beta[ind], ind.row = ind.test, ind.col = ind)
 
-AUCBoot(pred, y.sub[ind.test])  # 60.7 [60.0-61.3]
+AUCBoot(pred, y.sub[ind.test])  # 60.7 [60.0-61.3] / 57.2 [56.9-57.4]
 
 
 library(tidyverse)
@@ -186,7 +186,7 @@ AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = std_prs$thr.lp),
   y.sub[ind.test]
-) # 56.8 [56.2-57.5]
+) # 56.8 [56.2-57.5] / 56.2 [55.9-56.4]
 sum(lpval[ind.keep] > std_prs$thr.lp)  # 3034
 
 max_prs <- grid2 %>% arrange(desc(auc)) %>% slice(1:10) %>% print() %>% slice(1)
@@ -207,7 +207,7 @@ AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = max_prs$thr.lp),
   y.sub[ind.test]
-) # 57.3 [56.7-58.0]
+) # 57.3 [56.7-58.0] / 56.9 [56.7-57.2]
 sum(lpval[ind.keep] > max_prs$thr.lp)  # 360
 
 ggplot(grid2) +

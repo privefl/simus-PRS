@@ -6,7 +6,7 @@ POS <- simu$map$physical.pos
 INFO <- readRDS("data/ukbb4simu_info.rds")$info
 SD <- readRDS("data/ukbb4simu_stats.rds")$scale
 load("data/ukbb4simu_ind.RData")
-NCORES <- 12
+NCORES <- nb_cores()
 
 G.train <- snp_attach("data/ukbb4simu_train.rds")$genotypes
 G.test  <- snp_attach("data/ukbb4simu_test.rds")$genotypes
@@ -78,7 +78,7 @@ for (ic in 1:10) {
   # plot(mod)
 
   new_beta <- final_mod$beta.G
-  length(ind <- which(new_beta != 0))  # 534,610
+  nb_SCT <- length(ind <- which(new_beta != 0))  # 534,610
 
   pred <- final_mod$intercept +
     big_prodVec(G.test, new_beta[ind], ind.col = ind)
@@ -155,12 +155,34 @@ for (ic in 1:10) {
   #   theme_bigstatsr(size.rel = 0.7) +
   #   labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
 
+  # devtools::install_github("tshmak/lassosum")
+  library(lassosum)
+  library(doParallel)
+  registerDoParallel(cl <- makeCluster(NCORES))
+  system.time(
+    out <- lassosum.pipeline(
+      cor = gwas$z / sqrt(length(ind.gwas)),
+      snp = simu$map$marker.ID,
+      A1 = simu$map$allele1,
+      test.bfile = "data/ukbb4simu_train",
+      LDblocks = "EUR.hg19",
+      cluster = cl,
+      exclude.ambiguous = FALSE
+    )
+  ) # 19 min
+  stopCluster(cl)
+
+  v <- validate(out, pheno = y[ind.train], validate.function = AUC)
+  nb_lassosum <- length(ind <- which(v$best.beta != 0))
+  pred_lassosum <- big_prodVec(G.test, v$best.beta[ind], ind.col = ind)
+  # AUCBoot(pred_lassosum, y[ind.test])
 
   saveRDS(
     data.frame(
-      auc_std_prs = AUC(pred_std_prs, y[ind.test]), nb_std_prs,
-      auc_max_prs = AUC(pred_max_prs, y[ind.test]), nb_max_prs,
-      auc_SCT     = AUC(pred,         y[ind.test]), nb_SCT = length(ind)
+      auc_std_prs  = AUC(pred_std_prs,  y[ind.test]), nb_std_prs,
+      auc_max_prs  = AUC(pred_max_prs,  y[ind.test]), nb_max_prs,
+      auc_SCT      = AUC(pred,          y[ind.test]), nb_SCT,
+      auc_lassosum = AUC(pred_lassosum, y[ind.test]), nb_lassosum
     ),
     res_file
   )
@@ -182,17 +204,17 @@ list.files("res_simu", "10K_.+\\.rds$", full.names = TRUE) %>%
   matrix(nrow = 2) %>%
   as.data.frame()
 
-#    auc_std_prs nb_std_prs auc_max_prs nb_max_prs   auc_SCT nb_SCT
-# 1    0.7474213       3256   0.7553715       2111 0.7738378 534610
-# 2    0.7170490      19189   0.7565562       4057 0.7656288 519742
-# 3    0.7282358       4040   0.7417947       3069 0.7503708 539919
-# 4    0.7291773      13620   0.7463965       3281 0.7553631 514786
-# 5    0.7068318       6546   0.7496832       2573 0.7599364 512889
-# 6    0.7183867       9246   0.7485909       2759 0.7548817 525380
-# 7    0.7395077       3760   0.7566873       2370 0.7683659 264652
-# 8    0.7087284      18807   0.7341898       3113 0.7469039 300575
-# 9    0.7170015      29945   0.7587178       2856 0.7703412 514289
-# 10   0.7240793       6661   0.7574723       2253 0.7587521 273208
+#    auc_std_prs nb_std_prs auc_max_prs nb_max_prs   auc_SCT nb_SCT auc_lassosum nb_lassosum
+# 1    0.7458008       5990   0.7516140       4432 0.7736704 542209    0.7620051       20662
+# 2    0.7250482       3160   0.7563843       2379 0.7573077 529762    0.7478481       58173
+# 3    0.7318496       5771   0.7384623       4278 0.7490468 551710    0.7469321       57925
+# 4    0.7306039       9342   0.7531007       5057 0.7595327 346514    0.7508955       42376
+# 5    0.7119250      11912   0.7467747       1954 0.7538321 514890    0.7432223       42134
+# 6    0.7223041       4036   0.7555727       3061 0.7645596 499908    0.7591377       41961
+# 7    0.7412848       5516   0.7609582       3294 0.7736188 331156    0.7690968       42215
+# 8    0.7192138       9410   0.7412833       2409 0.7461987 502650    0.7420381       42824
+# 9    0.7154169      21999   0.7508203       2906 0.7661553 541711    0.7401974       42584
+# 10   0.7057531      20441   0.7532982       1628 0.7595182 506169    0.7308000       42651
 
-# 1 0.724 [0.716-0.731] 0.751 [0.746-0.755]     0.76 [0.755-0.766]
-# 2  11500 [6740-17000]    2840 [2530-3200] 450000 [376000-519000]
+# 1 0.725 [0.718-0.733] 0.751 [0.747-0.755]     0.76 [0.755-0.766] 0.749 [0.743-0.756]
+# 2   9750 [6210-13900]    3140 [2490-3820] 487000 [434000-528000] 43300 [37400-48700]

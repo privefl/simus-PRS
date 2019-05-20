@@ -96,56 +96,56 @@ file.size(G$backingfile) / 1024^3  # 410 GB
 CHR <- as.integer(ukbb$map$chromosome)
 POS <- ukbb$map$physical.pos
 
-set.seed(1)
-ind.train <- sort(sample(length(sub), 250e3))
+set.seed(1); ind.train <- sort(sample(length(sub), 250e3))
+# set.seed(2); ind.train <- c(sample(which(y.sub == 0), 2000), sample(which(y.sub == 1), 500))
 ind.test <- setdiff(seq_along(sub), ind.train)
 
 system.time(
   all_keep <- snp_grid_clumping(
-    G, CHR, POS, lpS = lpval, ind.row = sort(sample(ind.train, 20e3)),
-    grid.thr.imp = c(0.3, 0.6, 0.9, 0.95), infos.imp = info,
+    G, CHR, POS, lpS = lpval, ind.row = ind.train, infos.imp = info,
+    grid.thr.imp = c(0.3, 0.6, 0.9, 0.95),
     grid.thr.r2 = c(0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95),
     grid.base.size = c(50, 100, 200, 500),
-    ncores = 6  # use less cores because of swapping if not enough memory
+    ncores = 2  # use less cores because of swapping if not enough memory
   )
-) # 4.7H
+) # 16H -> 3.7H
 
 system.time(
   multi_PRS <- snp_grid_PRS(
     G, all_keep, betas = beta, lpS = lpval, ind.row = ind.train,
     n_thr_lpS = 50, backingfile = "data/UKBB_T2D_scores", ncores = NCORES
   )
-) # 2.6H
+) # 2.7H
 
 system.time(
   final_mod <- snp_grid_stacking(
-    multi_PRS, y.sub[ind.train], ncores = NCORES, n.abort = 5
+    multi_PRS, y.sub[ind.train], ncores = NCORES
   )
-) # 4.2H
+) # 6.2H
 mod <- final_mod$mod
 plot(mod)
 summary(mod)
 # # A tibble: 3 x 6
 #    alpha validation_loss intercept beta           nb_var message
 #    <dbl>           <dbl>     <dbl> <list>          <int> <list>
-# 1 0.0001           0.172     -2.26 <dbl [65,520]>  22263 <chr [10]>
-# 2 0.01             0.172     -2.24 <dbl [65,520]>   6811 <chr [10]>
-# 3 1                0.172     -2.22 <dbl [65,520]>   4643 <chr [10]>
+# 1 0.0001           0.172     -2.21 <dbl [65,520]>  23548 <chr [10]>
+# 2 0.01             0.172     -2.20 <dbl [65,520]>   6778 <chr [10]>
+# 3 1                0.172     -2.21 <dbl [65,520]>   4924 <chr [10]>
 
 new_beta <- final_mod$beta.G
 
-length(ind <- which(new_beta != 0))  # 535,785
+length(ind <- which(new_beta != 0))  # 548,343
 summary(new_beta)
 #       Min.    1st Qu.     Median       Mean    3rd Qu.       Max.
-# -0.3476860  0.0000000  0.0000000  0.0000191  0.0000000  0.2372232
+# -0.3556050  0.0000000  0.0000000  0.0000178  0.0000000  0.2404328
 summary(new_beta[which(sign(new_beta * beta) < 0)])
 #       Min.    1st Qu.     Median       Mean    3rd Qu.       Max.
-# -3.731e-02 -3.367e-04 -1.870e-05 -9.175e-05  2.246e-04  3.091e-02
+# -4.446e-02 -3.097e-04 -6.010e-06 -8.926e-05  1.902e-04  3.728e-02
 
 pred <- final_mod$intercept +
   big_prodVec(G, new_beta[ind], ind.row = ind.test, ind.col = ind)
 
-AUCBoot(pred, y.sub[ind.test])  # 63.8 [62.9-64.8]
+AUCBoot(pred, y.sub[ind.test])  # 63.8 [62.9-64.7] / 61.0 [60.6-61.5]
 
 # Save
 save(all_keep, multi_PRS, final_mod, file = "data/res_T2D.RData")
@@ -177,7 +177,7 @@ std_prs <- grid2 %>%
   slice(1) %>%
   print()
 #   size thr.r2 thr.imp num   thr.lp       auc
-# 1  500    0.2     0.3  14 5.073505 0.5988753
+# 1  500    0.2     0.3  14 5.580693 0.5989295
 
 ind.keep <- unlist(map(all_keep, std_prs$num))
 # Verif on training set
@@ -185,35 +185,35 @@ AUC(
   snp_PRS(G, beta[ind.keep], ind.test = ind.train, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = std_prs$thr.lp),
   y.sub[ind.train]
-) # 0.5988753
+) # 0.5989295
 # Eval on test set
 AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = std_prs$thr.lp),
   y.sub[ind.test]
-) # 59.5 [58.5-60.5]
-sum(lpval[ind.keep] > std_prs$thr.lp)  # 252
+) # 59.1 [58.1-60.1] / 59.8 [59.3-60.3]
+sum(lpval[ind.keep] > std_prs$thr.lp)  # 177
 
 max_prs <- grid2 %>% arrange(desc(auc)) %>% slice(1:10) %>% print() %>% slice(1)
 #    size thr.r2 thr.imp num   thr.lp       auc
-# 1   625    0.8    0.95 108 1.956627 0.6140597
-# 2   250    0.8    0.95 107 1.956627 0.6138879
-# 3   125    0.8    0.95 106 1.956627 0.6138412
-# 4   625    0.8    0.95 108 1.778804 0.6129340
-# 5   125    0.8    0.95 106 1.778804 0.6128041
-# 6   250    0.8    0.95 107 1.778804 0.6127832
-# 7   625    0.8    0.95 108 2.152227 0.6126656
-# 8   625    0.8    0.95 108 2.604043 0.6125938
-# 9   250    0.8    0.95 107 2.152227 0.6125006
-# 10  250    0.8    0.95 107 2.604043 0.6124968
+# 1   625    0.8    0.95 108 1.956627 0.6141710
+# 2   250    0.8    0.95 107 1.956627 0.6140094
+# 3   125    0.8    0.95 106 1.956627 0.6139443
+# 4   625    0.8    0.95 108 1.778804 0.6129134
+# 5   125    0.8    0.95 106 1.778804 0.6128044
+# 6   250    0.8    0.95 107 1.778804 0.6127813
+# 7   625    0.8    0.95 108 2.152227 0.6127131
+# 8   625    0.8    0.95 108 2.604043 0.6126175
+# 9   250    0.8    0.95 107 2.152227 0.6125586
+# 10  250    0.8    0.95 107 2.604043 0.6125395
 
 ind.keep <- unlist(map(all_keep, max_prs$num))
 AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = max_prs$thr.lp),
   y.sub[ind.test]
-) # 60.7 [59.8-61.6]
-sum(lpval[ind.keep] > max_prs$thr.lp)  # 33238
+) # 60.7 [59.8-61.7] / 60.2 [59.7-60.7]
+sum(lpval[ind.keep] > max_prs$thr.lp)  # 33,235
 
 ggplot(grid2) +
   geom_point(aes(thr.lp, auc)) +

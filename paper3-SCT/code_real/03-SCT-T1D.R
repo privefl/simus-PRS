@@ -110,8 +110,8 @@ file.size(G$backingfile) / 1024^3  # 359 GB
 CHR <- as.integer(ukbb$map$chromosome)
 POS <- ukbb$map$physical.pos
 
-set.seed(1)
-ind.train <- sort(sample(length(sub), 200e3))
+set.seed(1); ind.train <- sort(sample(length(sub), 200e3))
+# set.seed(2); ind.train <- c(sample(which(y.sub == 0), 2000), sample(which(y.sub == 1), 500))
 ind.test <- setdiff(seq_along(sub), ind.train)
 
 system.time(
@@ -159,7 +159,7 @@ summary(new_beta[which(sign(new_beta * beta) < 0)])
 pred <- final_mod$intercept +
   big_prodVec(G, new_beta[ind], ind.row = ind.test, ind.col = ind)
 
-AUCBoot(pred, y.sub[ind.test])  # 78.7 [75.7-81.7]
+AUCBoot(pred, y.sub[ind.test])  # 78.7 [75.7-81.7] / 78.7 [75.5-81.8]
 
 # Save
 save(all_keep, multi_PRS, final_mod, file = "data/res_T1D.RData")
@@ -204,7 +204,7 @@ AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = std_prs$thr.lp),
   y.sub[ind.test]
-) # 75.4 [72.4-78.4]
+) # 75.4 [72.4-78.4] / 75.6 [72.4-78.7]
 sum(lpval[ind.keep] > std_prs$thr.lp)  # 1112
 
 max_prs <- grid2 %>% arrange(desc(auc)) %>% slice(1:10) %>% print() %>% slice(1)
@@ -225,7 +225,7 @@ AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = max_prs$thr.lp),
   y.sub[ind.test]
-) # 76.9 [73.9-79.7]
+) # 76.9 [73.9-79.7] / 76.7 [73.6-79.8]
 sum(lpval[ind.keep] > max_prs$thr.lp)  # 267
 
 ggplot(grid2) +

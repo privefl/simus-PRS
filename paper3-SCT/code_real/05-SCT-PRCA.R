@@ -103,8 +103,8 @@ file.size(G$backingfile) / 1024^3  # 181 GB
 CHR <- as.integer(ukbb$map$chromosome)
 POS <- ukbb$map$physical.pos
 
-set.seed(1)
-ind.train <- sort(sample(length(sub), 120e3))
+set.seed(1); ind.train <- sort(sample(length(sub), 120e3))
+# set.seed(2); ind.train <- c(sample(which(y.sub == 0), 2000), sample(which(y.sub == 1), 500))
 ind.test <- setdiff(seq_along(sub), ind.train)
 
 system.time(
@@ -113,9 +113,9 @@ system.time(
     grid.thr.imp = c(0.3, 0.6, 0.9, 0.95),
     grid.thr.r2 = c(0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95),
     grid.base.size = c(50, 100, 200, 500),
-    ncores = 8  # use less cores to prevent swapping if not enough RAM
+    ncores = 6  # use less cores to prevent swapping if not enough RAM
   )
-) # 9H
+) # 9H -> 3H
 
 system.time(
   multi_PRS <- snp_grid_PRS(
@@ -154,7 +154,7 @@ summary(new_beta[which(sign(new_beta * beta) < 0)])
 pred <- final_mod$intercept +
   big_prodVec(G, new_beta[ind], ind.row = ind.test, ind.col = ind)
 
-AUCBoot(pred, y.sub[ind.test])  # 71.7 [70.2-73.1]
+AUCBoot(pred, y.sub[ind.test])  # 71.7 [70.2-73.1] / 69.3 [68.7-70.0]
 
 
 library(tidyverse)
@@ -197,7 +197,7 @@ AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = std_prs$thr.lp),
   y.sub[ind.test]
-) # 68.0 [66.5-69.5]
+) # 68.0 [66.5-69.5] / 67.1 [66.4-67.8]
 sum(lpval[ind.keep] > std_prs$thr.lp)  # 1035
 
 max_prs <- grid2 %>% arrange(desc(auc)) %>% slice(1:10) %>% print() %>% slice(1)
@@ -218,7 +218,7 @@ AUCBoot(
   snp_PRS(G, beta[ind.keep], ind.test = ind.test, ind.keep = ind.keep,
           lpS.keep = lpval[ind.keep], thr.list = max_prs$thr.lp),
   y.sub[ind.test]
-) # 69.3 [67.8-70.8]
+) # 69.3 [67.8-70.8] / 68.7 [68.0-69.3]
 sum(lpval[ind.keep] > max_prs$thr.lp)  # 356
 
 ggplot(grid2) +

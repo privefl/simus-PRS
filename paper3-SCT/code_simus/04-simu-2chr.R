@@ -6,7 +6,7 @@ POS <- simu$map$physical.pos
 INFO <- readRDS("data/ukbb4simu_info.rds")$info
 SD <- readRDS("data/ukbb4simu_stats.rds")$scale
 load("data/ukbb4simu_ind.RData")
-NCORES <- 12
+NCORES <- nb_cores()
 
 G.train <- snp_attach("data/ukbb4simu_train.rds")$genotypes
 G.test  <- snp_attach("data/ukbb4simu_test.rds")$genotypes
@@ -84,7 +84,7 @@ for (ic in 1:10) {
   # plot(mod)
 
   new_beta <- final_mod$beta.G
-  length(ind <- which(new_beta != 0))  # 179,914
+  nb_SCT <- length(ind <- which(new_beta != 0))  # 179,914
   table(CHR[ind])
   # 1     2     3     4     5     6     7     8     9    10    11
   # 7537 50331 10699  9270  2383  8414  7924 29429  5758  8389   312
@@ -158,20 +158,43 @@ for (ic in 1:10) {
   # AUCBoot(pred_max_prs, y[ind.test])  # 79.8 [78.4-81.1]
   (nb_max_prs <- sum(lpval[ind.keep2] > max_prs$thr.lp))  # 675
 
-  ggplot(grid2) +
-    geom_point(aes(thr.lp, auc)) +
-    facet_grid(thr.imp ~ thr.r2 + size) +
-    scale_x_log10(limits = c(1, 10), breaks = c(1, 2, 5, 10), minor_breaks = 1:10) +
-    ylim(0.73, NA) +
-    theme_bigstatsr(size.rel = 0.7) +
-    labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
+  # ggplot(grid2) +
+  #   geom_point(aes(thr.lp, auc)) +
+  #   facet_grid(thr.imp ~ thr.r2 + size) +
+  #   scale_x_log10(limits = c(1, 10), breaks = c(1, 2, 5, 10), minor_breaks = 1:10) +
+  #   ylim(0.73, NA) +
+  #   theme_bigstatsr(size.rel = 0.7) +
+  #   labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
 
+
+  # devtools::install_github("tshmak/lassosum")
+  library(lassosum)
+  library(doParallel)
+  registerDoParallel(cl <- makeCluster(NCORES))
+  system.time(
+    out <- lassosum.pipeline(
+      cor = gwas$z / sqrt(length(ind.gwas)),
+      snp = simu$map$marker.ID,
+      A1 = simu$map$allele1,
+      test.bfile = "data/ukbb4simu_train",
+      LDblocks = "EUR.hg19",
+      cluster = cl,
+      exclude.ambiguous = FALSE
+    )
+  ) # 19 min
+  stopCluster(cl)
+
+  v <- validate(out, pheno = y[ind.train], validate.function = AUC)
+  nb_lassosum <- length(ind <- which(v$best.beta != 0))
+  pred_lassosum <- big_prodVec(G.test, v$best.beta[ind], ind.col = ind)
+  # AUCBoot(pred_lassosum, y[ind.test])
 
   saveRDS(
     data.frame(
-      auc_std_prs = AUC(pred_std_prs, y[ind.test]), nb_std_prs,
-      auc_max_prs = AUC(pred_max_prs, y[ind.test]), nb_max_prs,
-      auc_SCT     = AUC(pred,         y[ind.test]), nb_SCT = length(ind)
+      auc_std_prs  = AUC(pred_std_prs,  y[ind.test]), nb_std_prs,
+      auc_max_prs  = AUC(pred_max_prs,  y[ind.test]), nb_max_prs,
+      auc_SCT      = AUC(pred,          y[ind.test]), nb_SCT,
+      auc_lassosum = AUC(pred_lassosum, y[ind.test]), nb_lassosum
     ),
     res_file
   )
@@ -193,5 +216,17 @@ list.files("res_simu", "2chr_.+\\.rds$", full.names = TRUE) %>%
   matrix(nrow = 2) %>%
   as.data.frame()
 
-#    auc_std_prs nb_std_prs auc_max_prs nb_max_prs   auc_SCT nb_SCT
+#    auc_std_prs nb_std_prs auc_max_prs nb_max_prs   auc_SCT nb_SCT auc_lassosum nb_lassosum
+# 1    0.7856381       2420   0.7970973       1034 0.8358688 202518    0.7964701       14920
+# 2    0.7746098       3699   0.7811054       1036 0.8197938 214078    0.7804348       14914
+# 3    0.7766176       2578   0.7935147        388 0.8293244 157075    0.7965627       14526
+# 4    0.7561126       2924   0.7632801        441 0.8077963 183277    0.7704855       15395
+# 5    0.7584487       3550   0.7782242        483 0.8160370 154643    0.7846720       15121
+# 6    0.7706646       3330   0.7828623        617 0.8176642 190917    0.7907374       15052
+# 7    0.7710786       4001   0.7899965        703 0.8207598 139393    0.7933614       14982
+# 8    0.7749393       2401   0.7876626        644 0.8221962 194422    0.7951758       15378
+# 9    0.7779502       1854   0.7983809        358 0.8301890 174778    0.7970426       14188
+# 10   0.7780627       2691   0.7886458        729 0.8241376 188311    0.7881987       15075
 
+# 1 0.772 [0.767-0.777] 0.786 [0.78-0.792]    0.822 [0.818-0.827] 0.789 [0.784-0.794]
+# 2    2950 [2550-3350]      643 [508-792] 180000 [166000-193000] 15000 [14700-15200]

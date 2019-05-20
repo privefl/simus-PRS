@@ -6,7 +6,7 @@ POS <- simu$map$physical.pos
 INFO <- readRDS("data/ukbb4simu_info.rds")$info
 SD <- readRDS("data/ukbb4simu_stats.rds")$scale
 load("data/ukbb4simu_ind.RData")
-NCORES <- 12
+NCORES <- nb_cores()
 
 G.train <- snp_attach("data/ukbb4simu_train.rds")$genotypes
 G.test  <- snp_attach("data/ukbb4simu_test.rds")$genotypes
@@ -81,7 +81,7 @@ for (ic in 1:10) {
   # plot(mod)
 
   new_beta <- final_mod$beta.G
-  length(ind <- which(new_beta != 0))  # 242,895
+  nb_SCT <- length(ind <- which(new_beta != 0))  # 242,895
 
   pred <- final_mod$intercept +
     big_prodVec(G.test, new_beta[ind], ind.col = ind)
@@ -150,20 +150,43 @@ for (ic in 1:10) {
   # AUCBoot(pred_max_prs, y[ind.test])  # 79.9 [78.6-81.2]
   (nb_max_prs <- sum(lpval[ind.keep2] > max_prs$thr.lp))  # 139
 
-  ggplot(grid2) +
-    geom_point(aes(thr.lp, auc)) +
-    facet_grid(thr.imp ~ thr.r2 + size) +
-    scale_x_log10(limits = c(1, 100), breaks = c(1, 10, 80), minor_breaks = 10 * 1:10) +
-    ylim(0.76, NA) +
-    theme_bigstatsr(size.rel = 0.7) +
-    labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
+  # ggplot(grid2) +
+  #   geom_point(aes(thr.lp, auc)) +
+  #   facet_grid(thr.imp ~ thr.r2 + size) +
+  #   scale_x_log10(limits = c(1, 100), breaks = c(1, 10, 80), minor_breaks = 10 * 1:10) +
+  #   ylim(0.76, NA) +
+  #   theme_bigstatsr(size.rel = 0.7) +
+  #   labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
 
+
+  # devtools::install_github("tshmak/lassosum")
+  library(lassosum)
+  library(doParallel)
+  registerDoParallel(cl <- makeCluster(NCORES))
+  system.time(
+    out <- lassosum.pipeline(
+      cor = gwas$z / sqrt(length(ind.gwas)),
+      snp = simu$map$marker.ID,
+      A1 = simu$map$allele1,
+      test.bfile = "data/ukbb4simu_train",
+      LDblocks = "EUR.hg19",
+      cluster = cl,
+      exclude.ambiguous = FALSE
+    )
+  ) # 19 min
+  stopCluster(cl)
+
+  v <- validate(out, pheno = y[ind.train], validate.function = AUC)
+  nb_lassosum <- length(ind <- which(v$best.beta != 0))
+  pred_lassosum <- big_prodVec(G.test, v$best.beta[ind], ind.col = ind)
+  # AUCBoot(pred_lassosum, y[ind.test])
 
   saveRDS(
     data.frame(
-      auc_std_prs = AUC(pred_std_prs, y[ind.test]), nb_std_prs,
-      auc_max_prs = AUC(pred_max_prs, y[ind.test]), nb_max_prs,
-      auc_SCT     = AUC(pred,         y[ind.test]), nb_SCT = length(ind)
+      auc_std_prs  = AUC(pred_std_prs,  y[ind.test]), nb_std_prs,
+      auc_max_prs  = AUC(pred_max_prs,  y[ind.test]), nb_max_prs,
+      auc_SCT      = AUC(pred,          y[ind.test]), nb_SCT,
+      auc_lassosum = AUC(pred_lassosum, y[ind.test]), nb_lassosum
     ),
     res_file
   )
@@ -185,5 +208,17 @@ list.files("res_simu", "HLA_.+\\.rds$", full.names = TRUE) %>%
   matrix(nrow = 2) %>%
   as.data.frame()
 
-#    auc_std_prs nb_std_prs auc_max_prs nb_max_prs   auc_SCT nb_SCT
+#    auc_std_prs nb_std_prs auc_max_prs nb_max_prs   auc_SCT nb_SCT auc_lassosum nb_lassosum
+# 1    0.7918373        539   0.8011156         68 0.8118172 236885    0.7833035       30196
+# 2    0.7741994        620   0.7912485        209 0.8003261 146892    0.7728982       61415
+# 3    0.8002421        826   0.8058251       4190 0.8229958 150772    0.8161921       10938
+# 4    0.7789672        716   0.7877440        170 0.7960177 135238    0.7885623       10505
+# 5    0.7890941       3393   0.7998798        191 0.8097184  40376    0.8038703       10726
+# 6    0.7816266        533   0.7894456        290 0.7997792 109796    0.7970729       29929
+# 7    0.7871608        487   0.7978965         53 0.8107070 202531    0.8027462       29905
+# 8    0.8111678        547   0.8111678        547 0.8065341 241810    0.8016718       29742
+# 9    0.7678544       1314   0.7803259        281 0.7978841 222396    0.7784124       29721
+# 10   0.7921563        763   0.8107640         51 0.8185310  73849    0.7995486       11292
 
+# 1 0.787 [0.78-0.795] 0.798 [0.791-0.803]    0.807 [0.802-0.813] 0.794 [0.787-0.802]
+# 2     973 [601-1560]      605 [142-1430] 156000 [115000-196000] 25400 [16600-35500]

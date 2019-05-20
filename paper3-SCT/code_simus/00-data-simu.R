@@ -98,6 +98,19 @@ system.time(
   )
 ) # 3.3H
 
+# Write bed/bim/fam for LDpred and lassosum
+library(dplyr)
+train <- snp_attach("data/ukbb4simu_train.rds")
+train$map <- mutate(train$map, genetic.dist = 0, rsid = NULL,
+                    chromosome = as.integer(chromosome))
+train$fam <- snp_fake(nrow(G), 1)$fam
+snp_writeBed(train, bedfile = "data/ukbb4simu_train.bed")
+test <- snp_attach("data/ukbb4simu_test.rds")
+test$map <- mutate(test$map, genetic.dist = 0, rsid = NULL,
+                   chromosome = as.integer(chromosome))
+test$fam <- snp_fake(nrow(G), 1)$fam
+snp_writeBed(test, bedfile = "data/ukbb4simu_test.bed")
+
 # Verif GWAS
 ind_first <- seq_len(20e3)
 # devtools::install_github("privefl/paper2-PRS/pkg.paper.PRS")
