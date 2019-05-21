@@ -37,3 +37,20 @@ ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
   theme(legend.position = c(0.37, 0.85))
 
 ggsave("figures/AUC-simus.pdf", width = 870, height = 600, scale = 1 / 100)
+
+auc_simu %>%
+  rename(Scenario = simu) %>%
+  mutate_at(3:5, ~ round(. * 100, 1)) %>%
+  mutate(AUC = sprintf("%.1f [%.1f-%.1f]", mean, inf, sup)) %>%
+  select(-(3:5)) %>%
+  tidyr::spread(Method, AUC) %>%
+  print() %>%
+  xtable::xtable(align = "|c|l|c|c|c|c|") %>%
+  print(include.rownames = FALSE)
+#   Scenario stdCT            maxCT            SCT              lassosum
+# 1 100      79.8 [77.0-82.0] 86.9 [86.6-87.3] 86.3 [85.8-86.8] 83.2 [81.8-84.2]
+# 2 10K      72.5 [71.8-73.3] 75.1 [74.7-75.5] 76.0 [75.5-76.6] 74.9 [74.3-75.6]
+# 3 1M       68.9 [68.3-69.4] 69.5 [68.8-70.0] 69.0 [68.5-69.6] 70.4 [70.0-70.9]
+# 4 2chr     77.2 [76.7-77.7] 78.6 [78.0-79.2] 82.2 [81.8-82.7] 78.9 [78.4-79.4]
+# 5 err      69.8 [68.9-70.7] 70.7 [70.1-71.2] 73.2 [72.5-73.9] 72.1 [71.5-72.8]
+# 6 HLA      78.7 [78.0-79.5] 79.8 [79.1-80.4] 80.7 [80.2-81.3] 79.4 [78.7-80.2]
