@@ -34,6 +34,6 @@ ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
   scale_y_continuous(limits = c(0.5, 0.9), minor_breaks = 0:50 / 50,
                      oob = scales::rescale_none) +
   labs(x = "Simulation", y = "AUC") +
-  theme(legend.position = c(0.4, 0.87))
+  theme(legend.position = c(0.37, 0.85))
 
 ggsave("figures/AUC-simus.pdf", width = 870, height = 600, scale = 1 / 100)
