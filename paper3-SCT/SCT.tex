@@ -96,14 +96,15 @@
 \section{Introduction}
 
 Clumping and Thresholding (C+T, also called P+T) is a common technique for computing Polygenic Risk Scores (PRS) based on Genome-Wide Association Studies (GWAS) summary statistics \cite[]{euesden2014prsice,purcell2009common}.
-C+T allows deriving PRS for a sample of genotyped individuals using regression coefficients and p-values from GWAS summary statistics.
+C+T allows to derive PRS for a sample of genotyped individuals using regression coefficients and p-values of GWAS.
 C+T consists in making a sum of allele counts (genotypes), weighted by effect sizes from GWAS summary statistics, after having filtered twice the variants included in this sum.
-More precisely, the SNPs are first clumped (C) so that only SNPs that are weakly correlated with each other are retained ($S_{\text{clumping}}$). 
-Clumping looks at the most significant SNP iteratively, computes correlation between this index SNP and nearby SNPs within some genetic distance $w_c$, and removes all the nearby SNPs that are correlated with this index SNP beyond a particular threshold $r_c^2$. 
-Thresholding (T) consists in removing SNPs that are below a chosen level of significance ($p > p_T$). 
+More precisely, the SNPs are first clumped (C) so that only SNPs that are weakly correlated with each other are retained. 
+Clumping looks at the most significant SNP iteratively, computes correlation between this index SNP and nearby SNPs within some genetic distance $w_c$, and removes all the nearby SNPs that are correlated with this index SNP beyond a particular value $r_c^2$. 
+Thresholding (T) consists in removing variants with a p-value larger than a chosen level of significance ($p > p_T$). 
+Both steps of clumping and thresholding involve statistical compromise.
 The clumping step aims at removing redundancy in included effects that is simply due to linkage disequilibrium (LD) between variants. Yet, this procedure may as well remove independently predictive variants in nearby regions. 
 Similarly, thresholding must balance between including predictive variants and reducing noise in the score by excluding null effects.
-This is why hyper-parameters of clumping and thresholding must be picked with care when using C+T in order to maximize its predictive ability.
+This is why hyper-parameters of clumping and thresholding must be chosen with care when using C+T in order to maximize its predictive ability.
 
 Therefore, when applying C+T, one has to choose at least 3 hyper-parameters, which are the squared correlation threshold $r_c^2$ and the window size $w_c$ of clumping, together with the p-value threshold $p_T$.
 Usually, C+T users assign default values for clumping, such as $r_c^2$ of 0.1 (default of PRSice), 0.2  or 0.5 (default of PLINK), and $w_c$ of 250kb (default of PRSice and PLINK) or 500kb, and test several values for $p_T$ ranging from $1$ to $10^{-8}$ \cite[]{wray2014research,euesden2014prsice,chang2015second}.
@@ -122,11 +123,37 @@ We also show that SCT consistently improves prediction compared to any single C+
 
 \section{Material and Methods}
 
+\subsection{Clumping and Thresholding (C+T) and Stacked C+T (SCT)}\label{SCT}
+
+We compute C+T scores \textit{for each chromosome separately} and for several parameters:
+\begin{itemize}
+\item Threshold on imputation INFO score $\text{INFO}_T$ within \{0.3, 0.6, 0.9, 0.95\}.
+\item Squared correlation threshold of clumping $r_c^2$ within \{0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95\}.
+\item Base size of clumping window within \{50, 100, 200, 500\}. The window size $w_c$ is then computed as the base size divided by $r_c^2$. For example, for $r_c^2 = 0.2$, we test values of $w_c$ within \{250, 500, 1000, 2500\} (in kb). This is motivated by the fact that linkage disequilibrium is inversely proportional to genetic distance between variants \cite[]{pritchard2001linkage}.
+\item A sequence of 50 thresholds on p-values between the least and the most significant p-values, equally spaced on a log-log scale.
+\end{itemize}
+Thus, for individual $i$, chromosome $k$ and the four hyper-parameters $\text{INFO}_T$, $r_c^2$, $w_c$ and $p_T$, we compute C+T predictions
+\[{V}_i^{(k)} \left( \text{INFO}_T,~r_c^2,~w_c,~p_T \right) = \sum_{\substack{j \in S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c)}} \hat\beta_j \cdot G_{i,j} \cdot \mathbbm{1}\{p_j < p_T\}~,\] where $\hat\beta_j$ ($p_j$) are the effect sizes (p-values) estimated from the GWAS, $G_{i,j}$ is the dosage for individual $i$ and SNP $j$, and the set $S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c)$ corresponds to first restricting to variants of chromosome $k$ with an INFO score $\ge \text{INFO}_T$ and that further result from clumping with parameters $r_c^2$ and $w_c$.
+%Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
+
+Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
+Then, we stack all these polygenic scores (for individuals in the training set) by using these scores as explanatory variables and the phenotype as the outcome in a regression setting \cite[]{breiman1996stacked}.
+In other words, we fit weights for each C+T scores using an efficient penalized logistic regression available in R package bigstatsr \cite[]{prive2019efficient}.
+This results in a linear combination of C+T scores, where C+T scores are merely linear combinations of variants, so that we can derive a single vector of effect sizes corresponding to each variant. The single vector of new variant effects resulting from stacking C+T scores is used for evaluation in the test set. 
+We refer to this method as ``SCT'' in the rest of the paper.
+
+From this grid of 123,200 vectors of polygenic scores, we also derive two C+T scores for comparison.
+First, ``stdCT'' is the standard C+T score using some default parameters, i.e.\ with $r_c^2$ = 0.2, $w_c$ = 500, a liberal threshold of 0.3 on imputation INFO score, and choosing the p-value threshold ($\ge 10^{-8}$) maximizing the AUC on the training set \cite[]{wray2014research}.
+Second, ``maxCT'' is the C+T score maximizing the AUC on the training set among the 5600 (123200 / 22) C+T scores corresponding to all different sets of parameters tested.
+Note that stdCT and maxCT use the same set of parameters for all chromosomes, i.e.\ for one set of the four hyper-parameters, they are defined as ${V}^{(1)} + \cdots + {V}^{(22)}$.
+In contrast, SCT uses the whole matrix of 123,200 vectors.
+
+
 \subsection{Simulations}
 
 We use variants from the UK Biobank (UKBB) imputed dataset that have a minor allele frequency larger than 1\% and an imputation INFO score larger than 0.3. There are almost 10M such variants, of which we randomly choose 1M.
 To limit population structure and family structure, we restrict individuals to the ones identified by the UK Biobank as British with only subtle structure and exclude all second individuals in each pair reported by the UK Biobank as being related \cite[]{bycroft2017genome}.
-This results in a total of 335,609 individuals that we split into three sets: a set of 10,000 individuals for training the hyper-parameters, another set of 10,000 individuals for testing (evaluating the models) and lastly a set with the remaining 315,609 individuals for computing summary statistics (GWAS).
+This results in a total of 335,609 individuals that we split into three sets: a set of 315,609 individuals for computing summary statistics (GWAS), a set of 10,000 individuals for training hyper-parameters and lastly a test set of 10,000 individuals for evaluating models.
 
 We read the UKBB BGEN files using function \texttt{snp\_readBGEN} from package bigsnpr \cite[]{prive2017efficient}.
 For simulating phenotypes and computing summary statistics, we read UKBB data as hard calls by randomly sampling hard calls according to reported imputation probabilities.
@@ -138,23 +165,23 @@ Liability scores are computed from a model with additive effects only: we comput
 
 We explore three additional scenarios with more complex architectures. 
 In scenario ``2chr'', 100 SNPs of chromosome 1 and all SNPs of chromosome 2 are causal with half of the heritability for both chromosomes; it aims at assessing predictive performance when disease architectures are different for different chromosomes. 
-In scenario ``err'', we sample 10,000 random causal SNPs but 10\% of the GWAS effects are reported with an opposite effect in the summary statistics; it aims at assessing if methods are able to partially correct for differences in effect sizes between GWAS and the target data.
+In scenario ``err'', we sample 10,000 random causal SNPs but 10\% of the GWAS effects are reported with an opposite effect in the summary statistics; it aims at assessing if methods are able to partially correct for errors or mere differences in effect sizes between GWAS and the target data.
 In scenario ``HLA'', 7105 causal SNPs are chosen in one long-range LD region of chromosome 6; it aims at assessing if methods can handle strong correlation between causal variants.
 
 To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we restricted the data to have minimal population structure, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (a few minutes vs several hours) while providing similar effect sizes and Z-scores (Figure \ref{fig:GWAS}).
 
-In simulations, we compare stdCT, maxCT, SCT and lassosum \cite[]{mak2017polygenic}. Each simulation scenario is repeated 10 times and the average AUC is reported. We prefer to use AUC over Nagelkerke's $R^2$ because AUC has a desirable property of being independent of the proportion of cases in the validation sample; one definition of AUC is the probability that the score of a randomly selected case is larger than the score of a randomly selected control \cite[]{wray2013pitfalls}. 
+In simulations, we compare four methods: stdCT, maxCT, SCT (defined in section \ref{SCT}) and lassosum \cite[]{mak2017polygenic}. Each simulation scenario is repeated 10 times and the average AUC is reported. We prefer to use AUC over Nagelkerke's $R^2$ because AUC has a desirable property of being independent of the proportion of cases in the validation sample; one definition of AUC is the probability that the score of a randomly selected case is larger than the score of a randomly selected control \cite[]{wray2013pitfalls}. 
 
 \subsection{Real summary statistics}
 
 We also investigate predictive performance of C+T and SCT in the UK Biobank using external summary statistics from published GWAS of real diseases, for which we summarize the number of individuals and variants in table \ref{tab:sumstats} \cite[]{buniello2018nhgri}.
 As in simulations, we restrict individuals to the ones identified by the UK Biobank as British with only subtle structure and exclude all second individuals in each pair reported by the UK Biobank as being related \cite[]{bycroft2017genome}.
 Table \ref{tab:sumstats} also summarizes the number of cases and controls in the UKBB, after this filtering and for each phenotype analyzed.
-For details on how we define phenotypes in the UKBB, please refer to our R code. 
+For details on how we define phenotypes in the UKBB, please refer to our R code (Section \ref{repro}). 
 Briefly, we use self-reported illness codes (field \#20001 for cancers and \#20002 otherwise) and ICD10 codes (fields \#40001, \#40002, \#41202 and \#41204 for all diseases, and field \#40006 specifically for cancers).
 
 \begin{table}[h]
-\caption{Number of cases and controls in UK Biobank (UKBB) for many binary traits, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS we use here.\label{tab:sumstats}}
+\caption{Number of cases and controls in UK Biobank (UKBB) for several disease phenotypes, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS from which we use summary statistics.\label{tab:sumstats}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -179,38 +206,14 @@ Note that, when no or very few alleles are flipped, we disable the strand flippi
 For example, for type 2 diabetes, there are 1,408,672 variants in summary statistics ($p < 0.1$), of which 215,821 are ambiguous SNPs. 
 If we remove these ambiguous SNPs, 1,145,260 variants are matched with UKBB, of which only 38 are actually flipped. So, instead, we do not allow for flipping and do not remove ambiguous alleles, then 1,350,844 variants are matched with UKBB.
 
-In these real data applications, we compare stdCT, maxCT and SCT. Training SCT and choosing optimal hyper-parameters for C+T use 63\%-90\% of the data reported in table \ref{tab:sumstats}. The training set can therefore contain as many as 300K individuals.
-We also compare these methods using a much smaller training set of 500 cases and 2000 controls.
+Training SCT and choosing optimal hyper-parameters for C+T (stdCT and maxCT) use 63\%-90\% of the UK Biobank data reported in table \ref{tab:sumstats}. The training set can therefore contain as many as 300K individuals.
+To assess how sample size affects predictive performance of methods, we also compare these methods using a much smaller training set of 500 cases and 2000 controls.
 
-\subsection{Clumping and Thresholding (C+T) and Stacked C+T (SCT)}
 
-We compute C+T scores \textit{for each chromosome separately} and for several parameters:
-\begin{itemize}
-\item Threshold on imputation INFO score $\text{INFO}_T$ within \{0.3, 0.6, 0.9, 0.95\}.
-\item Squared correlation threshold of clumping $r_c^2$ within \{0.01, 0.05, 0.1, 0.2, 0.5, 0.8, 0.95\}.
-\item Base size of clumping window within \{50, 100, 200, 500\}. The window size $w_c$ is then computed as the base size divided by $r_c^2$. For example, for $r_c^2 = 0.2$, we test values of $w_c$ within \{250, 500, 1000, 2500\} (in kb). This is motivated by the fact that linkage disequilibrium is inversely proportional to genetic distance between variants \cite[]{pritchard2001linkage}.
-\item A sequence of 50 thresholds on p-values between the least and the most significant p-values, equally spaced on a log-log scale.
-\end{itemize}
-Thus, for individual $i$, chromosome $k$ and the four hyper-parameters $\text{INFO}_T$, $r_c^2$, $w_c$ and $p_T$, we compute C+T predictions
-\[{V}_i^{(k)} \left( \text{INFO}_T,~r_c^2,~w_c,~p_T \right) = \sum_{\substack{j \in S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c)}} \hat\beta_j \cdot G_{i,j} \cdot \mathbbm{1}\{p_j < p_T\}~,\] where $\hat\beta_j$ ($p_j$) are the effect sizes (p-values) estimated from the GWAS, $G_{i,j}$ is the dosage for individual $i$ and SNP $j$, and $S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c)$ corresponds to first restricting to variants of chromosome $k$ with an INFO score $\ge \text{INFO}_T$ and that further result from clumping with parameters $r_c^2$ and $w_c$.
-%Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
+\subsection{Reproducibility}\label{repro}
 
-Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
-Then, we stack all these polygenic scores (for individuals in the training set) by using these scores as explanatory variables and the phenotype as the outcome in a regression setting \cite[]{breiman1996stacked}.
-In other words, we fit weights for each C+T scores using an efficient penalized logistic regression available in R package bigstatsr \cite[]{prive2019efficient}.
-This results in a linear combination of C+T scores, where C+T scores are merely linear combinations of variants, so that we can derive a single vector of effect sizes corresponding to each variant. The single vector of new variant effects resulting from stacking C+T scores is used for evaluation in the test set. 
-We refer to this method as ``SCT'' in the rest of the paper.
-
-From this grid of 123,200 vectors of polygenic scores, we also derive two C+T scores for comparison.
-First, ``stdCT'' is the standard C+T score using some default parameters, i.e.\ with $r_c^2$ = 0.2, $w_c$ = 500, a liberal threshold of 0.3 on imputation INFO score, and choosing the p-value threshold ($\ge 10^{-8}$) maximizing the AUC on the training set \cite[]{wray2014research}.
-Second, ``maxCT'' is the C+T score maximizing the AUC on the training set among the 5600 (123200 / 22) C+T scores corresponding to all different sets of parameters tested.
-Note that stdCT and maxCT use the same set of parameters for all chromosomes, i.e.\ for one set of the four hyper-parameters, they are defined as ${V}^{(1)} + \cdots + {V}^{(22)}$.
-In contrast, SCT uses the whole matrix of 123,200 vectors.
-
-\subsection{Reproducibility}
-
-All the code to reproduce the analyses and the figures of this paper is available as R scripts at \url{https://github.com/privefl/simus-PRS/tree/master/paper3-SCT} \cite[]{r2018}.
-Note that you need to have access to the UK Biobank data that we are not allowed to share  (\url{http://www.ukbiobank.ac.uk/}).
+The code to reproduce the analyses and figures of this paper is available as R scripts at \url{https://github.com/privefl/simus-PRS/tree/master/paper3-SCT} \cite[]{r2018}.
+To execute these scripts, you need to have access to the UK Biobank data that we are not allowed to share  (\url{http://www.ukbiobank.ac.uk/}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -221,7 +224,7 @@ Note that you need to have access to the UK Biobank data that we are not allowed
 We test 6 different simulations scenarios. 
 In all these scenarios, maxCT --that tests a much larger grid of hyper-parameters values for C+T on the training set-- consistently provides higher AUC values on the test set as compared to stdCT that tests only several p-value thresholds while using default values for the other parameters (Figure \ref{fig:AUC-simus}). 
 The absolute improvement in AUC of maxCT over stdCT is particularly large in the cases of 100 and 10,000 causal SNPs, where causal effects are mostly independent of one another. 
-In these cases, using a very stringent $r_c^2 = 0.01$ threshold of clumping provides higher predictive performance than using a standard default of $r_c^2 = 0.2$ (Figures \ref{fig:simugridA} and \ref{fig:simugridB}). However, $r_c^2 = 0.2$ provides best predictive performance when simulating 1M causal variants. Still, using a large grid of 2500 kb increases AUC as compared to using default values of either 250 or 500 kb (Figure \ref{fig:simugridC}).
+In these cases, using a very stringent $r_c^2 = 0.01$ threshold of clumping provides higher predictive performance than using a standard default of $r_c^2 = 0.2$ (Figures \ref{fig:simugridA} and \ref{fig:simugridB}). However, $r_c^2 = 0.2$ provides best predictive performance when simulating 1M causal variants. Still, using a large window size $w_c$ of 2500 kb increases AUC as compared to using default values of either 250 or 500 kb (Figure \ref{fig:simugridC}).
 
 \begin{figure}[h]
 \centerline{\includegraphics[width=0.8\textwidth]{AUC-simus.pdf}}
@@ -229,10 +232,10 @@ In these cases, using a very stringent $r_c^2 = 0.01$ threshold of clumping prov
 \label{fig:AUC-simus}
 \end{figure}
 
-As for SCT, it provides equal or higher predictive performance than maxCT in simulation scenarios (Figure \ref{fig:AUC-simus}). In the first three simple scenarios simulating 100, 10K or 1M causal SNPs anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, small effects on chromosome 2 and no effect on other chromosomes, mean AUC is 78.7\% for maxCT and 82.2\% for SCT, which is an absolute increase of 3.5\%. In the ``err'' scenario where we report GWAS summary statistics with 10\% reversed effects (errors), mean AUC is 70.2\% for maxCT and 73.2\% for SCT, which is an absolute increase of 3\%.
+As for SCT, it provides equal or higher predictive performance than maxCT in the different simulation scenarios (Figure \ref{fig:AUC-simus}). In the first three simple scenarios simulating 100, 10K or 1M causal SNPs anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, small effects on chromosome 2 and no effect on other chromosomes, mean AUC is 78.7\% for maxCT and 82.2\% for SCT. In the ``err'' scenario where we report GWAS summary statistics with 10\% reversed effects (errors), mean AUC is 70.2\% for maxCT and 73.2\% for SCT.
 SCT also provides higher AUC than lassosum, expect when simulating all SNPs as causal (1M).
 
-Effects resulting from SCT (Figure \ref{fig:neweffsimu}) are mostly comprise between the GWAS effects and 0. For the simulation with only 100 causal SNPs, resulting effects are either nearly the same as in the GWAS, or near 0 (or exactly 0).
+Effects resulting from SCT (Figure \ref{fig:neweffsimu}) are mostly comprised between the GWAS effects and 0. For the simulation with only 100 causal SNPs, resulting effects are either nearly the same as in the GWAS, or near 0 (or exactly 0).
 When there are some correlation between causal predictors (Scenarios ``1M'' and ``HLA'') or when reporting GWAS effects with some opposite effect (``err''), some effects resulting from SCT are in the opposite direction as compared to the GWAS effects.
 
 \subsection{Real summary statistics}
@@ -247,12 +250,12 @@ For all 8 diseases, predictions were optimized when choosing a threshold on impu
 \label{fig:AUC-real}
 \end{figure}
 
-Furthermore, when training size uses a large proportion of the UK Biobank data, SCT outforms maxCT for all 8 diseases considered with an additional mean absolute increase of AUC of 2.2\%, making it 3.5\% as compared to stdCT (Figure \ref{fig:AUC-real} and table \ref{tab:AUC}).
+Furthermore, when training size uses a large proportion of the UK Biobank data, SCT outperforms maxCT for all 8 diseases considered with an additional mean absolute increase of AUC of 2.2\%, making it 3.5\% as compared to stdCT (Figure \ref{fig:AUC-real} and table \ref{tab:AUC}).
 Predictive performance improvement of SCT versus maxCT is particularly notable for coronary artery disease (2.8\%), type 2 diabetes (3.1\%) and asthma (3.4\%).
 
 Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with few effects being largely unchanged, and others having an effect that is shrunk to 0 or equals to 0, i.e.\ variants not included in the final model (Figure \ref{fig:neweffreal}).
 
-When training size is smaller (500 cases and 2000 controls only), SCT is not as good as when training size is large. SCT remains a competitive method expect for depression for which maxCT performs much better than SCT (Figure \ref{fig:AUC-real-small}).
+When training size is smaller (500 cases and 2000 controls only instead of 200K-300K individuals), SCT is not as good as when training size is large, yet SCT remains a competitive method expect for depression for which maxCT performs much better than SCT (Figure \ref{fig:AUC-real-small}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -263,7 +266,7 @@ When training size is smaller (500 cases and 2000 controls only), SCT is not as 
 C+T is a widely-used method for computing PRS. 
 C+T is a relatively simple and easily applicable method that directly uses effects from GWAS regression coefficients and that discards SNPs in LD. 
 The popularity of this method may be due to both PLINK and PRSice, two pieces of software that make it easy to apply C+T \cite[]{purcell2007plink,euesden2014prsice,chang2015second}.
-Here, we define 4 hyper-parameters for C+T (minor allele frequency could be a fifth one). Usually, C+T scores for different p-value thresholds are derived, using some arbitrary values for the other 3 hyper-parameters.
+Here, we define 4 hyper-parameters for C+T (minor allele frequency could be a fifth one). Usually, C+T scores for different p-value thresholds are derived, using some default values for the other 3 hyper-parameters.
 In R package bigsnpr, we now provide some efficient functions to compute C+T scores for many combinations of these parameters.
 Using simulated and real data, we show that choosing different values rather than default ones for these hyper-parameters has the potential to substantially improves performance of C+T, making C+T a very competitive method.
 We cannot test all possible combinations of these parameters, but it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include SNPs with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures \ref{fig:grid-RA} and \ref{fig:grid-MDD}). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure \ref{fig:grid-CAD}), or to focus on a finer grid of stringent imputation thresholds only (Table \ref{tab:param}).
@@ -273,18 +276,19 @@ Combining multiple PRS is not a new idea \cite[]{krapohl2018multi,inouye2018geno
 This is both an advantage of SCT because it makes SCT more flexible than any C+T model, but it can be also a weakness as it is difficult to learn weights for all these models if training size if small.
 Normally, cross-validation should be used to prevent overfitting when using stacking and it is also suggested to use positivity constraints in stacking \cite[]{breiman1996stacked}.
 However, cross-validation is not necessary here since building C+T scores does not make use of the phenotype of the training set that is later used in the stacking; the training set is only used to choose the best set of hyper-parameters for C+T.
-Moreover, we allow C+T scores to have negative weights in the final model because we think it makes sense to do so for three reasons. First, because C+T scores are overlapping in the SNPs they use, using some negative weights allows to only weight groups of SNPs ``in the middle'' that correspond to the differences of two sets of SNPs included in C+T scores. 
+Moreover, we allow C+T scores to have negative weights in the final model because we think it makes sense to do so for three reasons. First, because C+T scores are overlapping in the SNPs they use, using some negative weights allows to only weight groups of SNPs ``in the middle'' that correspond to the differences of two sets of SNPs included in C+T scores [TODO: make this sentence more understandable]. 
 Second, because of LD, some SNPs might have different effects when learned jointly with others (Figures \ref{fig:neweff1M} and \ref{fig:neweffHLA}). 
-Third, if reported GWAS effects are different in the data which we compute the PRS from, for example when applying SCT in a different population as the GWAS was conducted in, having SNPs with opposite effects might help adapt the GWAS effects.
+Third, if reported GWAS effects are different in the data which we compute the PRS from, for example when applying SCT in a different population as the GWAS was conducted in, having SNPs with opposite effects can help adjust the effects learned during GWAS.
 
 \subsection{Limitations of the study}
 
 We analyze 8 different binary phenotypes in this study, but there are more to be analyzed. For example, for psychiatric disease, we include only depression (MDD) because diseases such as schyzophrenia and bipolar disorder have very few cases in the UK Biobank; dedicated datasets should be used to assess effectiveness of maxCT and SCT for such diseases. 
-We also do not analyze many automimmune diseases as summary statistics are often outdated\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/} and, because there are usually large effects on chromosome 6, methods that use individual-level data instead of summary statistics are likely to provide better predictive models \cite[]{prive2019efficient}.
+We also do not analyze many automimmune diseases as summary statistics are often outdated (2010-2011\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/}) and, because there are usually large effects on chromosome 6, methods that use individual-level data instead of summary statistics are likely to provide better predictive models \cite[]{prive2019efficient}.
 We also voluntarily do not analyze any continuous trait such as height or BMI because there are many individual-level data available in UKBB for such phenotypes and methods directly using individual-level data are likely to provide better predictive models for predicting in UKBB than the ones using summary statistics \cite[]{prive2019efficient,chung2019efficient}. 
 Phenotypes with tiny effects such as educational attainment for which huge GWAS summary statistics are available might be an exception \cite[]{lee2018gene}.
 
-Moreover, we focus this study on improving the C+T method. The C+T method is by far the simplest and most widely-used method for constructing polygenic risk scores based on summary statistics. The idea behind C+T is really simple because it directly uses weights learned from GWAS; it further removes SNPs as one does when reporting hits from GWAS, i.e.\ only SNPs that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported. 
+Moreover, we focus this study on improving the C+T method. The C+T method is by far the simplest and most widely-used method for constructing polygenic risk scores based on summary statistics. 
+The idea behind C+T is simple because it directly uses weights learned from GWAS; it further removes SNPs as one does when reporting hits from GWAS, i.e.\ only SNPs that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported. 
 Yet, there are two other established methods based on summary statistics, LDpred and lassosum \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Several other recent methods such as NPS, PRS-CS and SBayesR are being developed \cite[]{chun2019non,ge2019polygenic,lloyd2019improved}.
 Some methods require only a small reference panel to account for LD while some methods have a phase of retraining that needs a training set with individual-level data and phenotypes.
 Here, we include lassosum in the simulations since no other method has proven to be better, and because it is simple to use. 
@@ -311,18 +315,18 @@ However, here for CAD, fitting two separate models results in a slight loss of p
 Thus, adding `sex' as a covariate in the model may provide a model with similar discrimination and with better calibration of probabilities (if prevalence in the data is representative of prevalence in the population). Yet, we would like to emphasize again that reporting one AUC figure for all individuals would be misleading in the case of using variable `sex' in the model.
 
 
-\subsection{Conclusion and future directions}
+\subsection{Conclusion}
 
 We focus this paper on improving the widely-used C+T method by testing a wide-range of hyper-parameters values. More broadly, we believe that any implementation of statistical methods should come with an easy and effective way to choose hyper-parameters of these methods well. 
 We believe that C+T will continue to be used for many years as it is both simple to use and to understand. 
-Moreover, it remains an effective method since it can adapt to many different disease architectures by playing with all hyper-parameters.
+Moreover, it remains an effective method since it can adapt to many different disease architectures by tuning all hyper-parameters.
 
 Instead of choosing one set of hyper-parameters, we show that stacking C+T predictions further improves predictive performance. 
 There are many advantages of SCT over any single C+T prediction: first, it can learn different architecture models for different chromosomes, it can learn a mixture of large and small effects and it can more generally adapt initial weights of the GWAS in order to maximize prediction.
 Moreover, model resulting from SCT, as a linear combination (stacking) of linear combinations (C+T scores), it remains a simple linear model with one vector of coefficients.
 Yet, to learn weights of all C+T scores may require the training size to be large enough.
 
-As a future direction, note that we added an extra parameter in the SCT pipeline that makes possible for an user to define their own group of variants. This opens many possibilities for SCT.
+[TODO: Michael doesn't understand this paragraph] As a future direction, note that we added an extra parameter in the SCT pipeline that makes possible for an user to define their own group of variants. This opens many possibilities for SCT.
 For example, we could derive and stack C+T scores for two (or more) different GWAS summary statistics, e.g.\ for different ancestries or for different phenotypes. This would make SCT usable as a multivariate method. 
 Another use would be to learn differentiate between two different phenotypes such as T1D and T2D.
 
