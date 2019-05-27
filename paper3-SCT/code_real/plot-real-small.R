@@ -28,6 +28,8 @@ Asthma & 56.2 [55.9-56.4] & 56.9 [56.7-57.2] & 57.2 [56.9-57.4] \\" %>%
                 color = "black", width = 0.2, size = 1) +
   scale_y_continuous(limits = c(0.5, NA), oob = scales::rescale_none,
                      breaks = 0:10 / 10, minor_breaks = 0:50 / 50) +
-  theme(legend.position = c(0.8, 0.8))
+  theme(legend.position = c(0.8, 0.8)) +
+  scale_fill_manual(values = c("#440154FF", "#2A788EFF", "#7AD151FF")) +
+  scale_color_manual(values = c("#440154FF", "#2A788EFF", "#7AD151FF"))
 
 ggsave("figures/AUC-real-small.pdf", width = 750, height = 500, scale = 1 / 100)
