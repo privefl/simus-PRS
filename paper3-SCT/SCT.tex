@@ -86,7 +86,9 @@
 \newpage
 
 \abstract{
-When computing Clumping and Thresholding (C+T) scores, people usually test several p-value thresholds to maximize predictive ability of derived polygenic scores.
+Polygenic prediction has the potential to contribute to precision medicine. 
+Clumping and Thresholding (C+T) is a widely used method to derive polygenic scores.
+When using C+T, people usually test several p-value thresholds to maximize predictive ability of derived polygenic scores.
 Along with this p-value threshold, we propose to tune 3 other hyper-parameters for C+T. 
 We implement an efficient way to derive C+T scores corresponding to many different sets of hyper-parameters.
 For example, you can now derive thousands of different C+T scores for 300K individuals and 1M variants in less than one day.
@@ -102,12 +104,12 @@ Using this grid of computed C+T scores, we further extend C+T with stacking. Mor
 
 \section{Introduction}
 
-The ability to predict disease risk accurately is a principal aim of modern precision medicine.  As more population-scale genetic datasets become available, polygenic risk scores (PRS) are expected to become more accurate and clinically relevant. The most commonly used method for computing polygenic scores is clumping and thresholding (C+T), also known as pruning and thresholding (P+T).  The C+T polygenic score is defined as the sum of allele counts (genotypes), weighted by estimated effect sizes obtained from genome-wide association studies, where two filtering steps have been applied \cite[]{wray2007prediction,purcell2009common,dudbridge2013power,wray2014research,euesden2014prsice,chatterjee2016developing}.
+The ability to predict disease risk accurately is a principal aim of modern precision medicine.  As more population-scale genetic datasets become available, polygenic risk scores (PRS) are expected to become more accurate and clinically relevant. The most commonly used method for computing polygenic scores is Clumping and Thresholding (C+T), also known as pruning and thresholding (P+T).  The C+T polygenic score is defined as the sum of allele counts (genotypes), weighted by estimated effect sizes obtained from genome-wide association studies, where two filtering steps have been applied \cite[]{wray2007prediction,purcell2009common,dudbridge2013power,wray2014research,euesden2014prsice,chatterjee2016developing}.
 More precisely, the variants are first clumped (C) so that only variants that are weakly correlated with one another are retained.
 Clumping looks at the most significant variant iteratively, computes correlation between this index variant and nearby variants within some genetic distance $w_c$, and removes all the nearby variants that are correlated with this index variant beyond a particular value $r_c^2$.
 Thresholding (T) consists in removing variants with a p-value larger than a chosen level of significance ($p > p_T$).
 Both steps, clumping and thresholding, represent a statistical compromise between signal and noise.
-The clumping step prunes redundant correlated effects caused by linkage disequilibrium (LD) between variants. However, this procedure may also remove independently predictive variants in nearby regions.
+The clumping step prunes redundant correlated effects caused by linkage disequilibrium (LD) between variants. However, this procedure may also remove independently predictive variants in nearby LD regions.
 Similarly, thresholding must balance between including predictive variants and reducing noise in the score by excluding null effects.
 This is why hyper-parameters of clumping and thresholding must be chosen with care when using C+T in order to maximize its predictive ability.
 
@@ -268,31 +270,30 @@ When training size is smaller (500 cases and 2000 controls only instead of 200K-
 
 \subsection{Predictive performance improvement of C+T}
 
-C+T is a widely-used method for computing PRS.
-C+T is a relatively simple and easily applicable method that directly uses effects from GWAS regression coefficients and that discards variants in LD.
-The popularity of this method may be due to both PLINK and PRSice, two pieces of software that make it easy to apply C+T \cite[]{purcell2007plink,euesden2014prsice,chang2015second}.
-Here, we define 4 hyper-parameters for C+T (minor allele frequency could be a fifth one). Usually, C+T scores for different p-value thresholds are derived, using some default values for the other 3 hyper-parameters.
-In R package bigsnpr, we now provide some efficient functions to compute C+T scores for many combinations of these parameters.
-Using simulated and real data, we show that choosing different values rather than default ones for these hyper-parameters has the potential to substantially improves performance of C+T, making C+T a very competitive method.
-We cannot test all possible combinations of these parameters, but it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include variants with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures \ref{fig:grid-RA} and \ref{fig:grid-MDD}). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure \ref{fig:grid-CAD}), or to focus on a finer grid of stringent imputation thresholds only (Table \ref{tab:param}).
+C+T has the advantage that it is intuitive and an easily applicable method for obtaining polygenic scores trained on GWAS summary statistics. Two popular pieces of software that implement C+T, PLINK and PRSice, have further contributed to the prevalence of C+T \cite[]{purcell2007plink,euesden2014prsice,chang2015second}.
+Usually, C+T scores for different p-value thresholds are derived, using some default values for the other 3 hyper-parameters.
+In R package bigsnpr, we extend C+T to efficiently consider more hyper-parameters (4 by default) and enable the user to define their own qualitative variant annotations to filter on (e.g.\ minor allele frequency could be used as a fifth parameter).
+Using simulated and real data, we show that choosing different values rather than default ones for these hyper-parameters can substantially improve the performance of C+T, making C+T a very competitive method as good as more sophisticated methods such as lassosum.
+Moreover, it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include variants with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures \ref{fig:grid-RA} and \ref{fig:grid-MDD}). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure \ref{fig:grid-CAD}), or to focus on a finer grid of stringent imputation thresholds only (Table \ref{tab:param}).
 
-Using this large grid of C+T scores for many different hyper-parameters, we show that stacking these scores instead of choosing the best one improves prediction further \cite[]{breiman1996stacked}.
-Combining multiple PRS is not a new idea \cite[]{krapohl2018multi,inouye2018genomic}, but we push this idea to the limit by combining 123,200 polygenic scores.
-This is both an advantage of SCT because it makes SCT more flexible than any C+T model, but it can be also a weakness as it is difficult to learn weights for all these models if training size if small.
+Using a large grid of C+T scores for different hyper-parameters, we show that stacking these scores instead of choosing the best one improves prediction further \cite[]{breiman1996stacked}.
+Combining multiple PRS is not a new idea \cite[]{krapohl2018multi,inouye2018genomic,maier2018improving}, but we push this idea to the limit by combining 123,200 polygenic scores.
+This is an advantage of SCT because it makes SCT more flexible than any C+T model, but it of course also requires a larger training dataset with individual-level genotypes and phenotypes to learn the weights.
+
 Normally, cross-validation should be used to prevent overfitting when using stacking and it is also suggested to use positivity constraints in stacking \cite[]{breiman1996stacked}.
 However, cross-validation is not necessary here since building C+T scores does not make use of the phenotype of the training set that is later used in the stacking; the training set is only used to choose the best set of hyper-parameters for C+T.
-Moreover, we allow C+T scores to have negative weights in the final model because we think it makes sense to do so for three reasons. First, because C+T scores are overlapping in the variants they use, using some negative weights allows to only weight groups of variants ``in the middle'' that correspond to the differences of two sets of variants included in C+T scores [TODO: make this sentence more understandable].
-Second, because of LD, some variants might have different effects when learned jointly with others (Figures \ref{fig:neweff1M} and \ref{fig:neweffHLA}).
-Third, if reported GWAS effects are different in the data which we compute the PRS from, for example when applying SCT in a different population as the GWAS was conducted in, having variants with opposite effects can help adjust the effects learned during GWAS.
+Moreover, we allow C+T scores to have negative weights in the final model because we think it makes sense to do so for three reasons. First, because C+T scores are overlapping in the variants they use, using some negative weights allows to weight groups of variants that correspond to the difference of two sets of variants.
+Second, because of LD, variants may have different effects when learned jointly with others (Figures \ref{fig:neweff1M} and \ref{fig:neweffHLA}).
+Third, if reported GWAS effects are heterogenous between the GWAS dataset and the validation or target dataset, then having variants with opposite effects can help adjust the effects learned during GWAS.
 
 \subsection{Limitations of the study}
 
 We analyze 8 different binary phenotypes in this study, but there are more to be analyzed. For example, for psychiatric disease, we include only depression (MDD) because diseases such as schizophrenia and bipolar disorder have very few cases in the UK Biobank; dedicated datasets should be used to assess effectiveness of maxCT and SCT for such diseases.
-We also do not analyze many automimmune diseases as summary statistics are often outdated (2010-2011\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/}) and, because there are usually large effects on chromosome 6, methods that use individual-level data instead of summary statistics are likely to provide better predictive models \cite[]{prive2019efficient}.
+We also do not analyze many automimmune diseases because summary statistics are often outdated (2010-2011\footnote{https://www.immunobase.org/downloads/protected\_data/GWAS\_Data/}) and, because there are usually large effects in  regions of chromosome 6 with high LD, methods that use individual-level data instead of summary statistics are likely to provide better predictive models \cite[]{prive2019efficient}.
 We also voluntarily do not analyze any continuous trait such as height or BMI because there are many individual-level data available in UKBB for such phenotypes and methods directly using individual-level data are likely to provide better predictive models for predicting in UKBB than the ones using summary statistics \cite[]{prive2019efficient,chung2019efficient}.
 Phenotypes with tiny effects such as educational attainment for which huge GWAS summary statistics are available might be an exception \cite[]{lee2018gene}.
 
-Moreover, we focus this study on improving the C+T method. The C+T method is by far the simplest and most widely-used method for constructing polygenic risk scores based on summary statistics.
+Moreover, we focus this study on improving the C+T method. The C+T method is by far the simplest and most widely used method for constructing polygenic risk scores based on summary statistics.
 The idea behind C+T is simple because it directly uses weights learned from GWAS; it further removes variants as one does when reporting hits from GWAS, i.e.\ only variants that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported.
 Yet, there are two other established methods based on summary statistics, LDpred and lassosum \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Several other recent methods such as NPS, PRS-CS and SBayesR are being developed \cite[]{chun2019non,ge2019polygenic,lloyd2019improved}.
 Some methods require only a small reference panel to account for LD while some methods have a phase of retraining that needs a training set with individual-level data and phenotypes.
@@ -318,14 +319,14 @@ We could also learn to differentiate between two genetically different phenotype
 
 \subsection{Conclusion}
 
-We focus this paper on improving the widely-used C+T method by testing a wide-range of hyper-parameters values. More broadly, we believe that any implementation of statistical methods should come with an easy and effective way to choose hyper-parameters of these methods well.
+We focus this paper on improving the widely-used C+T method by testing a wide range of hyper-parameters values. More broadly, we believe that any implementation of statistical methods should come with an easy and effective way to choose hyper-parameters of these methods well.
 We believe that C+T will continue to be used for many years as it is both simple to use and to understand.
 Moreover, it remains an effective method since it can adapt to many different disease architectures by tuning all hyper-parameters.
 
 Moreover, instead of choosing one set of hyper-parameters, we show that stacking C+T predictions further improves predictive performance.
 There are many advantages of SCT over any single C+T prediction: first, it can learn different architecture models for different chromosomes, it can learn a mixture of large and small effects and it can more generally adapt initial weights of the GWAS in order to maximize prediction.
 Moreover, model resulting from SCT, as a linear combination (stacking) of linear combinations (C+T scores), it remains a simple linear model with one vector of coefficients.
-Yet, to learn weights of all C+T scores may require the training size to be large enough.
+Yet, learning weights of all C+T scores may require the training size to be large enough.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
