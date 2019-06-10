@@ -217,3 +217,32 @@ ggplot(grid2) +
   ylim(0.54, NA) +
   theme_bigstatsr(size.rel = 0.7) +
   labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
+
+
+# lassosum
+library(lassosum)
+ukbb$map <- dplyr::mutate(ukbb$map, genetic.dist = 0, rsid = NULL,
+                          chromosome = as.integer(chromosome))
+ukbb$fam <- snp_fake(nrow(G), 1)$fam
+bed <- snp_writeBed(ukbb, bedfile = "data/UKBB_asthma_lassosum.bed",
+                    ind.row = ind.train)
+library(doParallel)
+registerDoParallel(cl <- makeCluster(NCORES))
+system.time(
+  out <- lassosum.pipeline(
+    cor = p2cor(p = 10^-lpval, n = 19954 + 107715, sign = beta),
+    snp = ukbb$map$marker.ID,
+    A1 = ukbb$map$allele1,
+    test.bfile = "data/UKBB_asthma_lassosum",
+    LDblocks = "EUR.hg19",
+    cluster = cl,
+    sample = 20e3,
+    exclude.ambiguous = FALSE
+  )
+) # 2.8H
+stopCluster(cl)
+
+v <- validate(out, pheno = y.sub[ind.train], validate.function = AUC)
+length(ind <- which(v$best.beta != 0))  # 75,965
+pred_lassosum <- big_prodVec(G, v$best.beta[ind], ind.row = ind.test, ind.col = ind)
+AUCBoot(pred_lassosum, y.sub[ind.test])  # 58.7 [58.1-59.4] / 57.0 [56.7-57.3]

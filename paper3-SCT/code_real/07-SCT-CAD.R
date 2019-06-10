@@ -233,6 +233,35 @@ ggplot(grid2) +
   labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
 
 
+# lassosum
+library(lassosum)
+ukbb$map <- dplyr::mutate(ukbb$map, genetic.dist = 0, rsid = NULL,
+                          chromosome = as.integer(chromosome))
+ukbb$fam <- snp_fake(nrow(G), 1)$fam
+bed <- snp_writeBed(ukbb, bedfile = "data/UKBB_CAD_lassosum.bed",
+                    ind.row = ind.train)
+library(doParallel)
+registerDoParallel(cl <- makeCluster(NCORES))
+system.time(
+  out <- lassosum.pipeline(
+    cor = p2cor(p = 10^-lpval, n = 60801 + 123504, sign = beta),
+    snp = ukbb$map$marker.ID,
+    A1 = ukbb$map$allele1,
+    test.bfile = "data/UKBB_CAD_lassosum",
+    LDblocks = "EUR.hg19",
+    cluster = cl,
+    sample = 20e3,
+    exclude.ambiguous = FALSE
+  )
+) # 101 min
+stopCluster(cl)
+
+v <- validate(out, pheno = y.sub[ind.train], validate.function = AUC)
+length(ind <- which(v$best.beta != 0))  # 290,204
+pred_lassosum <- big_prodVec(G, v$best.beta[ind], ind.row = ind.test, ind.col = ind)
+AUCBoot(pred_lassosum, y.sub[ind.test])  # 63.0 [61.8-64.2] / 62.3 [61.8-62.8]
+
+
 ## The 'effect' of sex
 system.time(
   final_mod2 <- snp_grid_stacking(

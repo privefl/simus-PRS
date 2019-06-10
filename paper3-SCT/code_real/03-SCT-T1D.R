@@ -237,6 +237,35 @@ ggplot(grid2) +
   labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
 
 
+# lassosum
+library(lassosum)
+ukbb$map <- dplyr::mutate(ukbb$map, genetic.dist = 0, rsid = NULL,
+                          chromosome = as.integer(chromosome))
+ukbb$fam <- snp_fake(nrow(G), 1)$fam
+bed <- snp_writeBed(ukbb, bedfile = "data/UKBB_T1D_lassosum.bed",
+                    ind.row = ind.train)
+library(doParallel)
+registerDoParallel(cl <- makeCluster(NCORES))
+system.time(
+  out <- lassosum.pipeline(
+    cor = p2cor(p = 10^-lpval, n = 5913 + 8828, sign = beta),
+    snp = ukbb$map$marker.ID,
+    A1 = ukbb$map$allele1,
+    test.bfile = "data/UKBB_T1D_lassosum",
+    LDblocks = "EUR.hg19",
+    cluster = cl,
+    sample = 20e3,
+    exclude.ambiguous = FALSE
+  )
+) # 17.6H
+stopCluster(cl)
+
+v <- validate(out, pheno = y.sub[ind.train], validate.function = AUC)
+nb_lassosum <- length(ind <- which(v$best.beta != 0))  # 204785
+pred_lassosum <- big_prodVec(G, v$best.beta[ind], ind.row = ind.test, ind.col = ind)
+AUCBoot(pred_lassosum, y.sub[ind.test])  # 75.3 [72.2-78.3] / 75.5 [72.1-78.7]
+
+
 # Check large effects
 ind3 <- intersect(which(abs(beta) > 2), ind)
 gwas <- big_univLogReg(G, y.sub[ind.train], ind.train, ind3)
