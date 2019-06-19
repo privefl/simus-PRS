@@ -38,7 +38,7 @@ ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
   scale_fill_manual(values = c("#440154FF", "#2A788EFF", "#7AD151FF", "#FDE725FF")) +
   scale_color_manual(values = c("#440154FF", "#2A788EFF", "#7AD151FF", "#FDE725FF"))
 
-ggsave("figures/AUC-simus.pdf", width = 870, height = 600, scale = 1 / 100)
+ggsave("figures/AUC-simu1.pdf", width = 870, height = 600, scale = 1 / 100)
 
 auc_simu %>%
   rename(Scenario = simu) %>%

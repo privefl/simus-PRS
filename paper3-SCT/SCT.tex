@@ -94,11 +94,11 @@ Polygenic prediction has the potential to contribute to precision medicine. Clum
 (C+T) is a widely used method to derive polygenic scores. When using C+T, people usually
 test several p-value thresholds to maximize predictive ability of the derived polygenic scores. Along
 with this p-value threshold, we propose to tune three other hyper-parameters for C+T. We implement an
-efficient way to derive thousands of different C+T polygenic scores corresponding to a grid over the four hyper-parameters. For example, it takes less than one day to derive 123,200 different C+T scores (default grid size) for 300K individuals and 1M variants on a single node with 16 cores. 
+efficient way to derive thousands of different C+T polygenic scores corresponding to a grid over four hyper-parameters. For example, it takes a few hours to derive 123,200 different C+T scores (default grid size) for 300K individuals and 1M variants on a single node with 16 cores. 
 
-We find that optimizing over these four hyper-parameters improves the predictive performance of C+T in both simulations and real data applications as compared to tuning only the p-value threshold. A particularly large increase can be noted when predicting depression status, from an AUC of 0.557 (95\% CI: [0.544-0.569]) when tuning only the p-value threshold in C+T to an AUC of 0.592 (95\% CI: [0.580-0.604]) when tuning all four hyper-parameters of C+T. Overall, by optimizing C+T polygenic scores, one can achieve prediction accuracies on par with more sophisticated approaches such as lassosum.
+We find that optimizing over these four hyper-parameters improves the predictive performance of C+T in both simulations and real data applications as compared to tuning only the p-value threshold. A particularly large increase can be noted when predicting depression status, from an AUC of 0.557 (95\% CI: [0.544-0.569]) when tuning only the p-value threshold in C+T to an AUC of 0.592 (95\% CI: [0.580-0.604]) when tuning all four hyper-parameters we propose for C+T. Overall, by optimizing C+T polygenic scores, one can achieve prediction accuracies on par with more sophisticated approaches such as lassosum.
 
-We further propose Stacked Clumping and Thresholding (SCT), a polygenic score that results from stacking all C+T scores using an efficient penalized logistic (or linear) regression on individual-level training data. Instead of choosing one set of hyper-parameters that maximizes prediction in some training set, SCT learns an optimal linear combination of all C+T scores. We apply SCT to 8 different case-control diseases in the UK biobank data. We find that SCT substantially improves prediction accuracy as compared to C+T, resulting in an average AUC increase of 0.035 over standard C+T.  In summary, SCT furthermore improves prediction accuracies and is implemented in the efficient R package bigsnpr.
+We further propose Stacked Clumping and Thresholding (SCT), a polygenic score that results from stacking all derived C+T scores. Instead of choosing one set of hyper-parameters that maximizes prediction in some training set, SCT learns an optimal linear combination of all C+T scores by using an efficient penalized regression. We apply SCT to 8 different case-control diseases in the UK biobank data. We find that SCT substantially improves prediction accuracy as compared to C+T, resulting in an average AUC increase of 0.035 over standard C+T.  In summary, SCT furthermore improves prediction accuracies and is implemented in the efficient R package bigsnpr.
 }
 
 
@@ -148,9 +148,10 @@ Thus, for individual $i$, chromosome $k$ and the four hyper-parameters $\text{IN
 %Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
 
 Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
-Then, we stack all these polygenic scores (for individuals in the training set) by using these scores as explanatory variables and the phenotype as the outcome in a regression setting \cite[]{breiman1996stacked}.
+Then, we stack all these polygenic scores (for individuals in the training set) by using these scores as explanatory variables and the phenotype as the outcome in penalized regression \cite[]{breiman1996stacked}.
 In other words, we fit weights for each C+T scores using an efficient penalized logistic regression available in R package bigstatsr \cite[]{prive2019efficient}.
-This results in a linear combination of C+T scores, where C+T scores are merely linear combinations of variants, so that we can derive a single vector of effect sizes corresponding to each variant. The single vector of new variant effects resulting from stacking C+T scores is used for evaluation in the test set.
+This results in a linear combination of C+T scores, where C+T scores are merely linear combinations of variants, so that we can derive a single vector of variant effect sizes to be used for prediction in the test set. 
+%The single vector of new variant effects resulting from stacking C+T scores is used for evaluation in the test set.
 We refer to this method as ``SCT'' in the rest of the paper.
 
 From this grid of 123,200 vectors of polygenic scores, we also derive two C+T scores for comparison.
@@ -162,7 +163,8 @@ In contrast, SCT uses the whole matrix of 123,200 vectors.
 
 \subsection{Simulations}
 
-We use variants from the UK Biobank (UKBB) imputed dataset that have a minor allele frequency larger than 1\% and an imputation INFO score larger than 0.3. There are almost 10M such variants, of which we randomly choose 1M.
+We use variants from the UK Biobank (UKBB) imputed dataset that have a minor allele frequency larger than 1\% and an imputation INFO score larger than 0.3. There are almost 10M such variants, of which we randomly choose 1M in two different ways. First, we randomly sample from these 10M variants, so we use variants that are mainly well imputed (Figure \ref{fig:hist1}). Second, we sample variants according to the inverse of INFO score density, so we use variants that are globally not as well imputed as before (Figure \ref{fig:hist2}).
+
 To limit population structure and family structure, we restrict individuals to the ones identified by the UK Biobank as British with only subtle structure and exclude all second individuals in each pair reported by the UK Biobank as being related \cite[]{bycroft2017genome}.
 This results in a total of 335,609 individuals that we split into three sets: a set of 315,609 individuals for computing summary statistics (GWAS), a set of 10,000 individuals for training hyper-parameters and lastly a test set of 10,000 individuals for evaluating models.
 
@@ -181,7 +183,7 @@ In scenario ``HLA'', 7105 causal variants are chosen in one long-range LD region
 
 To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we restricted the data to have minimal population structure, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (a few minutes vs several hours) while providing similar effect sizes and Z-scores (Figure \ref{fig:GWAS}).
 
-In simulations, we compare four methods: stdCT, maxCT, SCT (defined in section \ref{SCT}) and lassosum \cite[]{mak2017polygenic}. Each simulation scenario is repeated 10 times and the average AUC is reported. We prefer to use AUC over Nagelkerke's $R^2$ because AUC has a desirable property of being independent of the proportion of cases in the validation sample; one definition of AUC is the probability that the score of a randomly selected case is larger than the score of a randomly selected control \cite[]{wray2013pitfalls}. An alternative to AUC would be to use a better $R^2$ on the liability scale \cite[]{lee2012better,allegrini2019genomic}.
+In simulations, we compare four methods: stdCT, maxCT, SCT (defined in section \ref{SCT}) and lassosum \cite[]{mak2017polygenic}. Each simulation scenario is repeated 10 times and the average AUC is reported. We prefer to use AUC over Nagelkerke's $R^2$ because AUC has a desirable property of being independent of the proportion of cases in the validation sample; one definition of AUC is the probability that the score of a randomly selected case is larger than the score of a randomly selected control \cite[]{wray2013pitfalls}. An alternative to AUC would be to use a better $R^2$ on the liability scale \cite[]{lee2012better,choi2018guide}.
 
 \subsection{Real summary statistics}
 
@@ -234,17 +236,17 @@ A quick introduction to SCT is also available at \url{https://privefl.github.io/
 \subsection{Simulations}
 
 We test 6 different simulations scenarios.
-In all these scenarios, maxCT --that tests a much larger grid of hyper-parameters values for C+T on the training set-- consistently provides higher AUC values on the test set as compared to stdCT that tests only several p-value thresholds while using default values for the other parameters (Figure \ref{fig:AUC-simus}).
+In all these scenarios, maxCT --that tests a much larger grid of hyper-parameters values for C+T on the training set-- consistently provides higher AUC values on the test set as compared to stdCT that tests only several p-value thresholds while using default values for the other parameters (Figure \ref{fig:AUC-simu1}).
 The absolute improvement in AUC of maxCT over stdCT is particularly large in the cases of 100 and 10,000 causal variants, where causal effects are mostly independent of one another.
 In these cases, using a very stringent $r_c^2 = 0.01$ threshold of clumping provides higher predictive performance than using a standard default of $r_c^2 = 0.2$ (Figures \ref{fig:simugridA} and \ref{fig:simugridB}). However, $r_c^2 = 0.2$ provides best predictive performance when simulating 1M causal variants. Still, using a large window size $w_c$ of 2500 kb increases AUC as compared to using default values of either 250 or 500 kb (Figure \ref{fig:simugridC}).
 
 \begin{figure}[h]
-\centerline{\includegraphics[width=0.8\textwidth]{AUC-simus.pdf}}
-\caption{Results of the 6 simulation scenarios: (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}). See corresponding values in table \ref{tab:AUC-simus}.}
-\label{fig:AUC-simus}
+\centerline{\includegraphics[width=0.8\textwidth]{AUC-simu1.pdf}}
+\caption{Results of the 6 simulation scenarios with well imputed variants: (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}). See corresponding values in table \ref{tab:AUC-simu1}.}
+\label{fig:AUC-simu1}
 \end{figure}
 
-As for SCT, it provides equal or higher predictive performance than maxCT in the different simulation scenarios (Figure \ref{fig:AUC-simus}). In the first three simple scenarios simulating 100, 10K or 1M causal variants anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, small effects on chromosome 2 and no effect on other chromosomes, mean AUC is 78.7\% for maxCT and 82.2\% for SCT. In the ``err'' scenario where we report GWAS summary statistics with 10\% reversed effects (errors), mean AUC is 70.2\% for maxCT and 73.2\% for SCT.
+As for SCT, it provides equal or higher predictive performance than maxCT in the different simulation scenarios (Figure \ref{fig:AUC-simu1}). In the first three simple scenarios simulating 100, 10K or 1M causal variants anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, small effects on chromosome 2 and no effect on other chromosomes, mean AUC is 78.7\% for maxCT and 82.2\% for SCT. In the ``err'' scenario where we report GWAS summary statistics with 10\% reversed effects (errors), mean AUC is 70.2\% for maxCT and 73.2\% for SCT.
 SCT also provides higher AUC than lassosum, expect when simulating all variants as causal (1M).
 
 Effects resulting from SCT (Figure \ref{fig:neweffsimu}) are mostly comprised between the GWAS effects and 0. For the simulation with only 100 causal variants, resulting effects are either nearly the same as in the GWAS, or near 0 (or exactly 0).
@@ -279,7 +281,7 @@ C+T has the advantage that it is intuitive and an easily applicable method for o
 Usually, C+T scores for different p-value thresholds are derived, using some default values for the other 3 hyper-parameters.
 In R package bigsnpr, we extend C+T to efficiently consider more hyper-parameters (4 by default) and enable the user to define their own qualitative variant annotations to filter on (e.g.\ minor allele frequency could be used as a fifth parameter).
 Using simulated and real data, we show that choosing different values rather than default ones for these hyper-parameters can substantially improve the performance of C+T, making C+T a very competitive method.
-Indeed, in our simulations (Figure \ref{fig:AUC-simus}), we found that optimizing C+T (maxCT) performed on par with more sophisticated methods such as lassosum.
+Indeed, in our simulations (Figure \ref{fig:AUC-simu1}), we found that optimizing C+T (maxCT) performed on par with more sophisticated methods such as lassosum.
 Moreover, it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include variants with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures \ref{fig:grid-RA} and \ref{fig:grid-MDD}). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure \ref{fig:grid-CAD}), or to focus on a finer grid of stringent imputation thresholds only (Table \ref{tab:param}).
 
 Using a large grid of C+T scores for different hyper-parameters, we show that stacking these scores instead of choosing the best one improves prediction further \cite[]{breiman1996stacked}.
@@ -365,6 +367,21 @@ This research has been conducted using the UK Biobank Resource under Application
 \setcounter{table}{0}
 
 \begin{figure}[htb]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+\includegraphics[width=\textwidth]{hist-simu1.png}
+\caption{First simulations}
+\label{fig:hist1}
+\end{subfigure}
+\begin{subfigure}[b]{0.48\textwidth}
+\includegraphics[width=\textwidth]{hist-simu2.png}
+\caption{Second simulations}
+\label{fig:hist2}
+\end{subfigure}
+\caption{Histogram of INFO scores for the 1M variants used in the simulations.}
+\end{figure}
+
+\begin{figure}[htb]
 \centerline{\includegraphics[width=0.95\textwidth]{equivalence.png}}
 \caption{Comparison of estimated effect sizes (\textbf{A}) and Z-scores (\textbf{B}) if computed using a logistic regression with 10 principal components as covariates, or with a simple Cochran-Armitage additive test. Phenotypes were simulated using 100 causal variants only, allowing for large effects.}
 \label{fig:GWAS}
@@ -377,7 +394,7 @@ This research has been conducted using the UK Biobank Resource under Application
 % latex table generated in R 3.5.2 by xtable 1.8-4 package
 % Tue May 21 19:07:57 2019
 \begin{table}[ht]
-\caption{AUC values on the test set for simulations (mean [95\% CI] from $10^4$ bootstrap samples).\label{tab:AUC-simus}}
+\caption{AUC values on the test set for simulations with well imputed variants (mean [95\% CI] from $10^4$ bootstrap samples).\label{tab:AUC-simu1}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -390,6 +407,34 @@ Scenario & stdCT & maxCT & SCT & lassosum \\
   2chr & 77.2 [76.7-77.7] & 78.6 [78.0-79.2] & 82.2 [81.8-82.7] & 78.9 [78.4-79.4] \\
   err & 69.8 [68.9-70.7] & 70.7 [70.1-71.2] & 73.2 [72.5-73.9] & 72.1 [71.5-72.8] \\
   HLA & 78.7 [78.0-79.5] & 79.8 [79.1-80.4] & 80.7 [80.2-81.3] & 79.4 [78.7-80.2] \\
+   \hline
+\end{tabular}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=0.8\textwidth]{AUC-simu1.pdf}}
+\caption{Results of the 6 simulation scenarios with less well imputed variants: (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}). See corresponding values in table \ref{tab:AUC-simu2}.}
+\label{fig:AUC-simu2}
+\end{figure}
+
+% latex table generated in R 3.5.2 by xtable 1.8-4 package
+% Wed Jun 19 15:19:38 2019
+\begin{table}[ht]
+\caption{AUC values on the test set for simulations with less well imputed variants (mean [95\% CI] from $10^4$ bootstrap samples).\label{tab:AUC-simu2}}
+\vspace*{0.5em}
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+  \hline
+Scenario & stdCT & maxCT & SCT & lassosum \\ 
+  \hline
+100 & 77.4 [75.9-78.8] & 83.9 [83.4-84.4] & 83.1 [82.5-83.6] & 80.1 [79.5-80.8] \\ 
+  10K & 69.2 [67.9-70.5] & 73.1 [72.5-73.6] & 73.2 [72.7-73.5] & 71.3 [70.7-71.8] \\ 
+  1M & 64.0 [63.6-64.4] & 64.0 [63.6-64.4] & 62.6 [62.3-63.0] & 64.1 [63.3-64.8] \\ 
+  2chr & 70.0 [68.8-71.2] & 74.4 [73.6-75.3] & 78.5 [77.9-79.1] & 73.2 [72.5-73.8] \\ 
+  err & 67.0 [66.0-68.1] & 68.6 [67.7-69.5] & 69.5 [68.9-70.1] & 65.6 [64.9-66.3] \\ 
+  HLA & 74.8 [73.0-76.3] & 75.3 [73.5-76.8] & 76.4 [74.5-78.0] & 75.8 [74.2-77.2] \\ 
    \hline
 \end{tabular}
 \end{table}
