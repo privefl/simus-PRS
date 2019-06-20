@@ -85,10 +85,6 @@
 
 \newpage
 
-TODO: add discu imputation UKBB
-
-TODO: add results lassosum + discu
-
 \abstract{
 Polygenic prediction has the potential to contribute to precision medicine. Clumping and Thresholding
 (C+T) is a widely used method to derive polygenic scores. When using C+T, people usually
@@ -249,6 +245,8 @@ In these cases, using a very stringent $r_c^2 = 0.01$ threshold of clumping prov
 As for SCT, it provides equal or higher predictive performance than maxCT in the different simulation scenarios (Figure \ref{fig:AUC-simu1}). In the first three simple scenarios simulating 100, 10K or 1M causal variants anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, small effects on chromosome 2 and no effect on other chromosomes, mean AUC is 78.7\% for maxCT and 82.2\% for SCT. In the ``err'' scenario where we report GWAS summary statistics with 10\% reversed effects (errors), mean AUC is 70.2\% for maxCT and 73.2\% for SCT.
 SCT also provides higher AUC than lassosum, expect when simulating all variants as causal (1M).
 
+Results are similar when using less well imputed variants in the simulations. Globally in these simulations, including a broad range of imputed variants with INFO score as low as 0.3 often maximizes prediction (Figures \ref{fig:simu1grid} and \ref{fig:simu2grid}).
+
 Effects resulting from SCT (Figure \ref{fig:neweffsimu}) are mostly comprised between the GWAS effects and 0. For the simulation with only 100 causal variants, resulting effects are either nearly the same as in the GWAS, or near 0 (or exactly 0).
 When there are some correlation between causal predictors (Scenarios ``1M'' and ``HLA'') or when reporting GWAS effects with some opposite effect (``err''), some effects resulting from SCT are in the opposite direction as compared to the GWAS effects.
 
@@ -270,6 +268,7 @@ Predictive performance improvement of SCT versus maxCT is particularly notable f
 Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with few effects being largely unchanged, and others having an effect that is shrunk to 0 or equals to 0, i.e.\ variants not included in the final model (Figure \ref{fig:neweffreal}).
 
 When training size is smaller (500 cases and 2000 controls only instead of 200K-300K individuals), SCT is not as good as when training size is large, yet SCT remains a competitive method expect for depression for which maxCT performs much better than SCT (Figure \ref{fig:AUC-real-small}).
+Performance of C+T and lassosum, methods that use the training set for choosing optimal hyper-parameters only as opposed to SCT that learns new weights, are little affected by using a smaller training size. However, even though lassosum can provide more accurate prediction for T2D and CAD, it can also perform very poorly for other diseases such as BRCA, PRCA and MDD (Figures \ref{fig:AUC-real} and \ref{fig:AUC-real-small}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -305,10 +304,12 @@ Phenotypes with tiny effects such as educational attainment for which huge GWAS 
 The principal aim of this work is to study and improve the widely used C+T method.
 The idea behind C+T is simple as it directly uses weights learned from GWAS; it further removes variants as one often does when reporting hits from GWAS, i.e.\ only variants that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported.
 Yet, there are two other established methods based on summary statistics, LDpred and lassosum \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Several other promising and more complex methods such as NPS, PRS-CS and SBayesR are currently being developed \cite[]{chun2019non,ge2019polygenic,lloyd2019improved}.
+One could also consider other variants of C+T such as choosing a different set of hyper-parameters for each chromosome separately, which would make a lot of sense e.g. in the ``2chr'' simulation scenario.
 %Some of these methods require only a small reference panel to account for LD while other methods require retraining using a training set with individual-level data and phenotypes.
-Here, we include lassosum in the simulations since no other method yet shown that they provide some improvement over lassosum.
-In addition, we found lassosum to be easy to set up and use.
-However, lassosum requires substantial computation time when there are too many samples or too many variants. Therefore, we did not apply lassosum to the full UK Biobank data.
+Here, we include lassosum in the comparisons since no other method has yet shown that they provide any improvement over lassosum.
+In addition, we found lassosum to be easy to use.
+We note that lassosum provides very changing predictive performance when applied to real data, which might be due partially to the initial filtering on p-value that we use to keep disk usage and computation time manageable when analyzing the UK Biobank dataset. 
+%However, lassosum requires substantial computation time when there are too many samples or too many variants. Therefore, we did not apply lassosum to the full UK Biobank data.
 A full comparison of methods (including individual-level data methods), including binary and continuous traits with different architectures, using different sizes of summary statistics and individual-level data for training, and in possibly different populations would be of great interest, but is out of scope for this paper.
 Indeed, we believe that different methods may perform very differently in different settings and that understanding what method is appropriate for each case is of paramount interest if the aim is to maximize prediction accuracy to make PRS clinically useful.
 
@@ -414,7 +415,7 @@ Scenario & stdCT & maxCT & SCT & lassosum \\
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{figure}[h]
-\centerline{\includegraphics[width=0.8\textwidth]{AUC-simu1.pdf}}
+\centerline{\includegraphics[width=0.8\textwidth]{AUC-simu2.pdf}}
 \caption{Results of the 6 simulation scenarios with less well imputed variants: (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}). See corresponding values in table \ref{tab:AUC-simu2}.}
 \label{fig:AUC-simu2}
 \end{figure}
@@ -429,12 +430,12 @@ Scenario & stdCT & maxCT & SCT & lassosum \\
   \hline
 Scenario & stdCT & maxCT & SCT & lassosum \\ 
   \hline
-100 & 77.4 [75.9-78.8] & 83.9 [83.4-84.4] & 83.1 [82.5-83.6] & 80.1 [79.5-80.8] \\ 
-  10K & 69.2 [67.9-70.5] & 73.1 [72.5-73.6] & 73.2 [72.7-73.5] & 71.3 [70.7-71.8] \\ 
-  1M & 64.0 [63.6-64.4] & 64.0 [63.6-64.4] & 62.6 [62.3-63.0] & 64.1 [63.3-64.8] \\ 
-  2chr & 70.0 [68.8-71.2] & 74.4 [73.6-75.3] & 78.5 [77.9-79.1] & 73.2 [72.5-73.8] \\ 
+100 & 77.4 [76.0-78.8] & 83.9 [83.4-84.4] & 83.1 [82.6-83.6] & 80.1 [79.5-80.8] \\ 
+  10K & 69.4 [68.4-70.5] & 73.0 [72.5-73.4] & 72.9 [72.5-73.3] & 71.2 [70.6-71.7] \\ 
+  1M & 64.0 [63.6-64.4] & 64.0 [63.6-64.4] & 62.7 [62.3-63.0] & 64.1 [63.3-64.8] \\ 
+  2chr & 70.0 [68.8-71.2] & 74.4 [73.6-75.2] & 78.5 [77.9-79.1] & 73.2 [72.5-73.8] \\ 
   err & 67.0 [66.0-68.1] & 68.6 [67.7-69.5] & 69.5 [68.9-70.1] & 65.6 [64.9-66.3] \\ 
-  HLA & 74.8 [73.0-76.3] & 75.3 [73.5-76.8] & 76.4 [74.5-78.0] & 75.8 [74.2-77.2] \\ 
+  HLA & 74.8 [72.9-76.3] & 75.3 [73.5-76.9] & 76.4 [74.5-78.0] & 75.8 [74.2-77.2] \\ 
    \hline
 \end{tabular}
 \end{table}
@@ -601,7 +602,46 @@ Asthma & 56.2 [55.9-56.4] & 56.9 [56.7-57.2] & 57.2 [56.9-57.4] & 57.0 [56.7-57.
 \caption{``HLA'': 7105 causal variants in a long-range LD region of chromosome 6}
 \end{subfigure}
 
-\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in the first simulation of each simulation scenario. Facets are presenting different clumping thresholds $r_c^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
+\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in the first simulation of each simulation scenario when using well imputed variants. Facets are presenting different clumping thresholds $r_c^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.\label{fig:simu1grid}}
+\end{figure}
+
+
+\begin{figure}[htb]
+\centering
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu100-2.png}
+\caption{``100'': 100 random causal variants}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu10K-2.png}
+\caption{``10K'': 10,000 random causal variants}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu1M-2.png}
+\caption{``1M'': all 1M variants are causal variants}
+\end{subfigure}
+\end{figure}
+
+\begin{figure}[htb]\ContinuedFloat
+\centering
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simu2chr-2.png}
+\caption{``2chr'': Causal variants on chromosomes 1 \& 2}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simuerr-2.png}
+\caption{``err'': 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect}
+\end{subfigure}
+\\~\\~\\
+\begin{subfigure}[b]{\textwidth}
+\includegraphics[width=\textwidth]{grid-simuHLA-2.png}
+\caption{``HLA'': 7105 causal variants in a long-range LD region of chromosome 6}
+\end{subfigure}
+
+\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in the first simulation of each simulation scenario when using less well imputed variants. Facets are presenting different clumping thresholds $r_c^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.\label{fig:simu2grid}}
 \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

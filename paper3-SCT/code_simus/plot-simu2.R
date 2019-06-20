@@ -34,9 +34,7 @@ ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
   scale_y_continuous(limits = c(0.5, 0.9), minor_breaks = 0:50 / 50,
                      oob = scales::rescale_none) +
   labs(x = "Simulation", y = "AUC") +
-  theme(legend.position = c(0.37, 0.85)) +
-  scale_fill_manual(values = c("#440154FF", "#2A788EFF", "#7AD151FF", "#FDE725FF")) +
-  scale_color_manual(values = c("#440154FF", "#2A788EFF", "#7AD151FF", "#FDE725FF"))
+  theme(legend.position = c(0.37, 0.85))
 
 ggsave("figures/AUC-simu2.pdf", width = 870, height = 600, scale = 1 / 100)
 
@@ -50,3 +48,9 @@ auc_simu %>%
   xtable::xtable(align = "|c|l|c|c|c|c|") %>%
   print(include.rownames = FALSE)
 #   Scenario stdCT            maxCT            SCT              lassosum
+# 1 100      77.4 [76.0-78.8] 83.9 [83.4-84.4] 83.1 [82.6-83.6] 80.1 [79.5-80.8]
+# 2 10K      69.4 [68.4-70.5] 73.0 [72.5-73.4] 72.9 [72.5-73.3] 71.2 [70.6-71.7]
+# 3 1M       64.0 [63.6-64.4] 64.0 [63.6-64.4] 62.7 [62.3-63.0] 64.1 [63.3-64.8]
+# 4 2chr     70.0 [68.8-71.2] 74.4 [73.6-75.2] 78.5 [77.9-79.1] 73.2 [72.5-73.8]
+# 5 err      67.0 [66.0-68.1] 68.6 [67.7-69.5] 69.5 [68.9-70.1] 65.6 [64.9-66.3]
+# 6 HLA      74.8 [72.9-76.3] 75.3 [73.5-76.9] 76.4 [74.5-78.0] 75.8 [74.2-77.2]
