@@ -87,7 +87,7 @@
 
 \abstract{
 Polygenic prediction has the potential to contribute to precision medicine. Clumping and Thresholding
-(C+T) is a widely used method to derive polygenic scores. When using C+T, people usually
+(C+T) is a widely used method to derive polygenic scores. When using C+T, it is common to
 test several p-value thresholds to maximize predictive ability of the derived polygenic scores. Along
 with this p-value threshold, we propose to tune three other hyper-parameters for C+T. We implement an
 efficient way to derive thousands of different C+T polygenic scores corresponding to a grid over four hyper-parameters. For example, it takes a few hours to derive 123,200 different C+T scores (default grid size) for 300K individuals and 1M variants on a single node with 16 cores. 
@@ -140,7 +140,7 @@ We compute C+T scores \textit{for each chromosome separately} and for several pa
 \item A sequence of 50 thresholds on p-values between the least and the most significant p-values, equally spaced on a log-log scale.
 \end{itemize}
 Thus, for individual $i$, chromosome $k$ and the four hyper-parameters $\text{INFO}_T$, $r_c^2$, $w_c$ and $p_T$, we compute C+T predictions
-\[{V}_i^{(k)} \left( \text{INFO}_T,~r_c^2,~w_c,~p_T \right) = \sum_{\substack{j \in S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c)}} \hat\beta_j \cdot G_{i,j} \cdot \mathbbm{1}\{p_j < p_T\}~,\] where $\hat\beta_j$ ($p_j$) are the effect sizes (p-values) estimated from the GWAS, $G_{i,j}$ is the dosage for individual $i$ and variant $j$, and the set $S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c)$ corresponds to first restricting to variants of chromosome $k$ with an INFO score $\ge \text{INFO}_T$ and that further result from clumping with parameters $r_c^2$ and $w_c$.
+\[{V}_i^{(k)} \left( \text{INFO}_T,~r_c^2,~w_c,~p_T \right) = \sum_{\substack{j \in S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c) \\ p_j < p_T}} \hat\beta_j \cdot G_{i,j}~,\] where $\hat\beta_j$ ($p_j$) are the effect sizes (p-values) estimated from the GWAS, $G_{i,j}$ is the dosage for individual $i$ and variant $j$, and the set $S_\text{clumping}(k,~\text{INFO}_T,~r_c^2,~w_c)$ corresponds to first restricting to variants of chromosome $k$ with an INFO score $\ge \text{INFO}_T$ and that further result from clumping with parameters $r_c^2$ and $w_c$.
 %Computation time is largely driven by the computation of clumping sets, which consists mainly in computing squared correlations between pairs of variants. So, to speed-up the overall computation, we cache the computation of those correlations.
 
 Overall, we compute $22 \times 4 \times 7 \times 4 \times 50 = 123200$ vectors of polygenic scores.
@@ -252,7 +252,7 @@ When there are some correlation between causal predictors (Scenarios ``1M'' and 
 
 \subsection{Real summary statistics}
 
-In terms of AUC, maxCT outperfoms stdCT for all 8 diseases consireded with a mean absolute increase of 1.3\% (Figures \ref{fig:AUC-real} and \ref{fig:AUC-real-small}).
+In terms of AUC, maxCT outperfoms stdCT for all 8 diseases considered with a mean absolute increase of 1.3\% (Figures \ref{fig:AUC-real} and \ref{fig:AUC-real-small}).
 A particularly large increase can be noted when predicting depression status (MDD), from an AUC of 55.7\% (95\% CI: [54.4-56.9]) with stdCT to an AUC of 59.2\% (95\% CI: [58.0-60.4]) with maxCT. For MDD, a liberal inclusion in clumping ($r_c^2$ = 0.8) and a stringent threshold on imputation accuracy ($\text{INFO}_T$ = 0.95) provides the best predictive performance (Figure \ref{fig:grid-MDD}).
 For all 8 diseases, predictions were optimized when choosing a threshold on imputation accuracy of at least 0.9, whereas optimal values for $r_c^2$ where very different depending on the architecture of diseases, with optimal selected values over the whole range of tested values for $r_c^2$ (Table \ref{tab:param}).
 
@@ -276,7 +276,7 @@ Performance of C+T and lassosum, methods that use the training set for choosing 
 
 \subsection{Predictive performance improvement of C+T}
 
-C+T has the advantage that it is intuitive and an easily applicable method for obtaining polygenic scores trained on GWAS summary statistics. Two popular pieces of software that implement C+T, PLINK and PRSice, have further contributed to the prevalence of C+T \cite[]{purcell2007plink,euesden2014prsice,chang2015second}.
+C+T has the advantage that it is intuitive and an easily applicable method for obtaining polygenic scores trained on GWAS summary statistics. Two popular software packages that implement C+T, PLINK and PRSice, have further contributed to the prevalence of C+T \cite[]{purcell2007plink,euesden2014prsice,chang2015second}.
 Usually, C+T scores for different p-value thresholds are derived, using some default values for the other 3 hyper-parameters.
 In R package bigsnpr, we extend C+T to efficiently consider more hyper-parameters (4 by default) and enable the user to define their own qualitative variant annotations to filter on (e.g.\ minor allele frequency could be used as a fifth parameter).
 Using simulated and real data, we show that choosing different values rather than default ones for these hyper-parameters can substantially improve the performance of C+T, making C+T a very competitive method.
@@ -291,7 +291,7 @@ Normally, cross-validation should be used to prevent overfitting when using stac
 However, cross-validation is not necessary here since building C+T scores does not make use of the phenotype of the training set that is later used in the stacking; the training set is only used to choose the best set of hyper-parameters for C+T.
 Moreover, we allow C+T scores to have negative weights in the final model for three reasons. First, because C+T scores are overlapping in the variants they use, using some negative weights allows to weight groups of variants that correspond to the difference of two sets of variants.
 Second, because of LD, variants may have different effects when learned jointly with others (Figures \ref{fig:neweff1M} and \ref{fig:neweffHLA}).
-Third, if reported GWAS effects are heterogenous between the GWAS dataset and the validation or target dataset, then having variants with opposite effects can help adjust the effects learned during GWAS.
+Third, if reported GWAS effects are heterogenous between the GWAS dataset and the validation or target dataset, then having variants with opposite effects can help to adjust the effects learned during GWAS.
 
 \subsection{Limitations of the study}
 
@@ -308,7 +308,8 @@ One could also consider other variants of C+T such as choosing a different set o
 %Some of these methods require only a small reference panel to account for LD while other methods require retraining using a training set with individual-level data and phenotypes.
 Here, we include lassosum in the comparisons since no other method has yet shown that they provide any improvement over lassosum.
 In addition, we found lassosum to be easy to use.
-We note that lassosum provides very changing predictive performance when applied to real data, which might be due partially to the initial filtering on p-value that we use to keep disk usage and computation time manageable when analyzing the UK Biobank dataset. 
+When applied to real data, lassosum yields mixed results because it achieves almost the largest AUC for some diseases (CAD, T2D) whereas it is less discriminative than standard C+T for other diseases (BRCA, MDD, PRCA) (Figure 2). This may be explained by the presence of large effects in the latter diseases, which can be an issue for methods that model LD.
+This may also be due to the initial filtering on p-value that we use to keep disk usage and computation time manageable when analyzing the UK Biobank dataset. 
 %However, lassosum requires substantial computation time when there are too many samples or too many variants. Therefore, we did not apply lassosum to the full UK Biobank data.
 A full comparison of methods (including individual-level data methods), including binary and continuous traits with different architectures, using different sizes of summary statistics and individual-level data for training, and in possibly different populations would be of great interest, but is out of scope for this paper.
 Indeed, we believe that different methods may perform very differently in different settings and that understanding what method is appropriate for each case is of paramount interest if the aim is to maximize prediction accuracy to make PRS clinically useful.
