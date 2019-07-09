@@ -264,7 +264,7 @@ For all 8 diseases, predictions were optimized when choosing a threshold on impu
 \end{figure}
 
 \begin{table}[h]
-\caption{Choice of C+T parameters based on the maximum AUC in the training set. Choosing optimal hyper-parameters for C+T use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}.\label{tab:param}}
+\caption{Choice of C+T parameters based on the maximum AUC in the training set. Choosing optimal hyper-parameters for C+T use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. Resulting predictions of maxCT in the test set are reported in figure \ref{fig:AUC-real}.\label{tab:param}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -348,7 +348,7 @@ One might also want to use other information such as sex or ancestry (using prin
 
 Finally, note that we added an extra parameter in the SCT pipeline that makes possible for an user to define their own groups of variants. This allows to refine the grid of computed C+T scores and opens many possibilities for SCT.
 For example, we could derive and stack C+T scores for two (or more) different GWAS summary statistics, e.g.\ for different ancestries or for different phenotypes. This would effectively extend SCT as a multivariate method.
-We could also learn to differentiate between two genetically different phenotypes with similar symptoms such as type 1 and type 2 diabetes, which is in our research interests.
+We could also learn to differentiate between two genetically different phenotypes with similar symptoms such as type 1 and type 2 diabetes.
 
 
 \subsection{Conclusion}
@@ -423,7 +423,7 @@ This research has been conducted using the UK Biobank Resource under Application
 % latex table generated in R 3.5.2 by xtable 1.8-4 package
 % Tue May 21 19:07:57 2019
 \begin{table}[!htpb]
-\caption{AUC values on the test set for simulations with well imputed variants (mean [95\% CI] from $10^4$ bootstrap samples).\label{tab:AUC-simu1}}
+\caption{AUC values on the test set for simulations with well imputed variants (mean [95\% CI] from $10^4$ bootstrap samples). These results are plotted in figure \ref{fig:AUC-simu1}.\label{tab:AUC-simu1}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -444,7 +444,7 @@ Scenario & stdCT & maxCT & SCT & lassosum \\
 \vspace*{7em}
 
 \begin{table}[!htpb]
-\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples) and the number of variants used in the final model. Training SCT and choosing optimal hyper-parameters for C+T and lassosum use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}.\label{tab:AUC}}
+\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples) and the number of variants used in the final model. Training SCT and choosing optimal hyper-parameters for C+T and lassosum use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. These results are plotted in figure \ref{fig:AUC-real}.\label{tab:AUC}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -489,7 +489,7 @@ Asthma & 56.8 [56.2-57.5] & 57.3 [56.7-58.0] & 60.7 [60.0-61.3] & 58.7 [58.1-59.
 % latex table generated in R 3.5.2 by xtable 1.8-4 package
 % Wed Jun 19 15:19:38 2019
 \begin{table}[!htpb]
-\caption{AUC values on the test set for simulations with less well imputed variants (mean [95\% CI] from $10^4$ bootstrap samples).\label{tab:AUC-simu2}}
+\caption{AUC values on the test set for simulations with less well imputed variants (mean [95\% CI] from $10^4$ bootstrap samples). These results are plotted in figure \ref{fig:AUC-simu2}.\label{tab:AUC-simu2}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -522,7 +522,7 @@ Scenario & stdCT & maxCT & SCT & lassosum \\
 \vspace*{4em}
 
 \begin{table}[!htpb]
-\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples). Training SCT and choosing optimal hyper-parameters for C+T and lassosum use 500 cases and 2000 controls only.\label{tab:AUC2}}
+\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples). Training SCT and choosing optimal hyper-parameters for C+T and lassosum use 500 cases and 2000 controls only. These results are plotted in figure \ref{fig:AUC-real-small}.\label{tab:AUC2}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
