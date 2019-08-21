@@ -1,8 +1,9 @@
 WORDS_TO_IGNORE <- c(
   "Aarhus", "almsson", "Alpes", "Aschard", "BGEN", "bigsnpr", "bigstatsr",
-  "Biobank", "Bioinformatique", "Biologie", "Biostatistique", "Bjarni", "Blum",
+  "biobank", "Bioinformatique", "Biologie", "Biostatistique", "Bjarni", "Blum",
   "BRCA", "Centre", "chr", "CNRS", "de", "egrative", "et", "Florian", "GWAS",
-  "Hugues", "IMAG", "Institut", "kb", "Laboratoire", "LD", "MDD", "phenotypes",
+  "Hugues", "IMAG", "Institut", "iteratively", "kb", "Laboratoire", "LD", "MDD",
+  "NCRR", "phenotypes",
   "PLINK", "polygenic", "polygenicity", "PRCA", "Priv", "PRS", "PRSice",
   "readBGEN", "SCT", "snp", "th", "thr", "TIMC", "Tronche", "UKBB", "UMR", "Vilhj")
 
