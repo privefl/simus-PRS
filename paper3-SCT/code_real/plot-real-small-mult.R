@@ -1,4 +1,4 @@
-# system("scp -r privef@krakenator:UKBiobank/res_small/* ~/Bureau/simus-PRS/res_small/")
+# system("scp privef@krakenator:UKBiobank/res_small/[^file]*.rds ~/Bureau/simus-PRS/res_small/")
 
 library(tidyverse)
 
@@ -30,7 +30,6 @@ auc_small_mult <- res_small_mult %>%
 ggplot(auc_small_mult, aes(Trait, mean, fill = Method, color = Method)) +
   bigstatsr::theme_bigstatsr() +
   geom_hline(yintercept = 0.5, linetype = 2) +
-  geom_hline(yintercept = 0.875, linetype = 3, color = "blue") +
   geom_col(position = position_dodge(), alpha = 0.5, color = "black", size = 1) +
   geom_errorbar(aes(ymin = inf, ymax = sup),
                 position = position_dodge(width = 0.9), color = "black", width = 0.2, size = 1) +
