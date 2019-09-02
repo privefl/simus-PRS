@@ -12,9 +12,19 @@ stopCluster(cl)
 # Keep 1M variants
 nb_snp <- sum(sapply(info_all_chr, nrow)) # 9,926,099
 set.seed(1); ind_snp <- sort(sample(nb_snp, 1e6))
+# {
+#   all_info <- unlist(purrr::map(info_all_chr, "info"))
+#   kern_smooth <- ks::kde(all_info)
+#   set.seed(2)
+#   # sampling with replacement is faster
+#   ind_snp <- sample(nb_snp, 5e6, replace = TRUE,
+#                     prob = 1 / predict(kern_smooth, x = all_info))
+#   ind_snp <- sort(head(unique(ind_snp), 1e6))
+# }
 info_final <- do.call(rbind, info_all_chr)[ind_snp, ]
 stopifnot(nrow(info_final) == 1e6)
 head(info_final)
+hist(info_final$info, xlab = "INFO score")
 saveRDS(info_final, "data/ukbb4simu_info.rds")
 
 

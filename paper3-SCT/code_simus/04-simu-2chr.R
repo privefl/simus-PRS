@@ -7,6 +7,7 @@ INFO <- readRDS("data/ukbb4simu_info.rds")$info
 SD <- readRDS("data/ukbb4simu_stats.rds")$scale
 load("data/ukbb4simu_ind.RData")
 NCORES <- nb_cores()
+Nss <- length(ind.gwas)
 
 G.train <- snp_attach("data/ukbb4simu_train.rds")$genotypes
 G.test  <- snp_attach("data/ukbb4simu_test.rds")$genotypes
@@ -19,7 +20,9 @@ for (ic in 1:10) {
   res_file <- paste0("res_simu/2chr_", ic, ".rds")
   if (file.exists(res_file)) next
   cat(ic, "\n")
+  tmp <- tempfile(tmpdir = "res_simu")
 
+  #### Simulate phenotype ####
   set.seed(ic)
   h2 <- 0.5; K <- 0.1; M1 <- 100; M2 <- length(ind2)
   set1 <- sort(sample(ind1, size = M1))
@@ -32,6 +35,7 @@ for (ic in 1:10) {
   y <- y + rnorm(nrow(G), sd = sqrt(1 - h2))
   y <- as.integer(y > qnorm(1 - K))             ## LTM
 
+  #### GWAS ####
   system.time(
     gwas <- big_apply(G, function(G, ind, ind.ca, ind.co) {
 
@@ -57,6 +61,7 @@ for (ic in 1:10) {
   lpval <- -pchisq(gwas$z^2, df = 1, lower.tail = FALSE, log.p = TRUE) / log(10)
   # hist(10^(-lpval))
 
+  #### SCT ####
   system.time(
     all_keep <- snp_grid_clumping(
       G.train, CHR, POS, lpS = lpval, ncores = NCORES,
@@ -69,7 +74,7 @@ for (ic in 1:10) {
   system.time(
     multi_PRS <- snp_grid_PRS(
       G.train, all_keep, betas = beta_gwas, lpS = lpval,
-      backingfile = sub("\\.rds$", "_scores", res_file),
+      backingfile = paste0(tmp, "_scores"),
       n_thr_lpS = 50, ncores = NCORES
     )
   ) # 1 min
@@ -107,6 +112,7 @@ for (ic in 1:10) {
   #   theme_bigstatsr() +
   #   labs(x = "Effect sizes from GWAS", y = "Non-zero effect sizes from SCT")
 
+  #### C+T ####
   grid2 <- attr(all_keep, "grid") %>%
     mutate(thr.lp = list(attr(multi_PRS, "grid.lpS.thr")), num = row_number()) %>%
     unnest()
@@ -163,17 +169,19 @@ for (ic in 1:10) {
   #   facet_grid(thr.imp ~ thr.r2 + size) +
   #   scale_x_log10(limits = c(1, 10), breaks = c(1, 2, 5, 10), minor_breaks = 1:10) +
   #   ylim(0.73, NA) +
+  #   # ylim(0.65, NA) +
   #   theme_bigstatsr(size.rel = 0.7) +
   #   labs(x = "-log10(p-value) threshold (log scale)", y = "AUC")
 
 
+  #### lassosum ####
   # devtools::install_github("tshmak/lassosum")
   library(lassosum)
   library(doParallel)
   registerDoParallel(cl <- makeCluster(NCORES))
   system.time(
     out <- lassosum.pipeline(
-      cor = gwas$z / sqrt(length(ind.gwas)),
+      cor = gwas$z / sqrt(Nss),
       snp = simu$map$marker.ID,
       A1 = simu$map$allele1,
       test.bfile = "data/ukbb4simu_train",
@@ -189,18 +197,72 @@ for (ic in 1:10) {
   pred_lassosum <- big_prodVec(G.test, v$best.beta[ind], ind.col = ind)
   # AUCBoot(pred_lassosum, y[ind.test])
 
+
+  #### LDpred ####
+  file_sumstats <- paste0(tmp, ".txt")
+  mutate(simu$map, chromosome = as.integer(chromosome),
+         beta = beta_gwas, pval = 10^-lpval) %>%
+    bigreadr::fwrite2(file_sumstats, sep = "\t")
+  file_hdf5 <- paste0(tmp, ".hdf5")
+
+  reticulate::use_python("/opt/rh/rh-python36/root/usr/bin/python")
+  reticulate::py_config()
+  # system("python3 --version", intern = TRUE)
+  ldpred <- "../ldpred/LDpred.py"
+  # system(glue::glue("python3 {ldpred} coord --help"))
+  system(glue::glue(
+    "python3 {ldpred} coord",
+    " --gf data/ukbb4simu_train",
+    " --ssf {file_sumstats}",
+    " --skip-coordination",
+    " --rs marker.ID --A1 allele1 --A2 allele2 --pos physical.pos --chr chromosome",
+    " --pval pval --eff beta --beta",
+    " --N {Nss}",
+    " --out {file_hdf5}"
+  )) # 21 min
+
+
+  system.time(
+    system(glue::glue(
+      "python3 {ldpred} gibbs",
+      " --cf {file_hdf5}",
+      " --ldr {round(nrow(simu$map) / 3000)}",
+      " --ldf {tmp}",
+      " --N {Nss}",
+      " --out {tmp}"
+    ))
+  ) # 127 min
+
+  ext <- c(sprintf("_LDpred_p%.4e.txt", c(1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001)),
+           "_LDpred-inf.txt")
+  files_ldpred <- paste0(tmp, ext)
+  beta_ldpred <- sapply(files_ldpred, function(file) {
+    res_ldpred <- bigreadr::fread2(file, select = c(3, 7))
+    beta_ldpred <- numeric(nrow(simu$map))
+    beta_ldpred[match(res_ldpred$sid, simu$map$marker.ID)] <- res_ldpred[[2]]
+    beta_ldpred
+  })
+
+  pred_train_ldpred <- big_prodMat(G.train, beta_ldpred, ncores = NCORES)
+  auc_train_ldpred <- apply(-pred_train_ldpred, 2, AUC, target = y[ind.train])
+
+  beta_ldpred_max <- beta_ldpred[, which.max(auc_train_ldpred)]
+  nb_ldpred <- sum(beta_ldpred_max != 0)
+  pred_ldpred <- big_prodVec(G.test, beta_ldpred_max)
+
   saveRDS(
     data.frame(
       auc_std_prs  = AUC(pred_std_prs,  y[ind.test]), nb_std_prs,
       auc_max_prs  = AUC(pred_max_prs,  y[ind.test]), nb_max_prs,
       auc_SCT      = AUC(pred,          y[ind.test]), nb_SCT,
-      auc_lassosum = AUC(pred_lassosum, y[ind.test]), nb_lassosum
+      auc_lassosum = AUC(pred_lassosum, y[ind.test]), nb_lassosum,
+      auc_ldpred   = AUC(-pred_ldpred,  y[ind.test]), nb_ldpred
     ),
     res_file
   )
   stopifnot(file.exists(res_file))
 
-  unlink(c(multi_PRS$rds, multi_PRS$bk))
+  unlink(paste0(tmp, "*"))
 
 }
 
