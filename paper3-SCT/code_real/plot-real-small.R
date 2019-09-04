@@ -31,3 +31,4 @@ Asthma & 56.2 [55.9-56.4] & 56.9 [56.7-57.2] & 57.2 [56.9-57.4] & 57.0 [56.7-57.
   theme(legend.position = c(0.8, 0.8))
 
 ggsave("figures/AUC-real-small.pdf", width = 850, height = 500, scale = 1 / 100)
+# ggsave("figures/AUC-real-small.png", width = 850, height = 500, scale = 1 / 100)

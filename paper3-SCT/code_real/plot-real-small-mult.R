@@ -1,4 +1,5 @@
-# system("scp privef@krakenator:UKBiobank/res_small/[^file]*.rds ~/Bureau/simus-PRS/res_small/")
+# system("scp privef@krakenator:UKBiobank/res_small/[^f]*.rds ~/Bureau/simus-PRS/res_small/")
+# system("scp privef@luxor:UKBiobank/res_small/[^f]*.rds ~/Bureau/simus-PRS/res_small/")
 
 library(tidyverse)
 

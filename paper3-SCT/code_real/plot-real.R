@@ -29,7 +29,7 @@ Asthma & 56.8 [56.2-57.5] & 57.3 [56.7-58.0] & 60.7 [60.0-61.3] & 58.7 [58.1-59.
   separate(AUC, c("AUC", "inf", "sup"), sep = "[^[0-9\\.]]+", convert = TRUE) %>%
   mutate_if(is.numeric, ~ . / 100) %>%
   mutate(Method = ordered(Method, levels = c("stdCT", "maxCT", "SCT", "lassosum"))) %>%
-  ggplot(aes(Trait, AUC, fill = Method, color = Method)) +
+  ggplot(aes(Trait, AUC, fill = Method)) +
   bigstatsr::theme_bigstatsr() +
   geom_hline(yintercept = 0.5, linetype = 2) +
   geom_col(position = position_dodge(), alpha = 0.5, color = "black", size = 1) +
@@ -37,6 +37,8 @@ Asthma & 56.8 [56.2-57.5] & 57.3 [56.7-58.0] & 60.7 [60.0-61.3] & 58.7 [58.1-59.
                 color = "black", width = 0.2, size = 1) +
   scale_y_continuous(limits = c(0.5, NA), oob = scales::rescale_none,
                      breaks = 0:10 / 10, minor_breaks = 0:50 / 50) +
-  theme(legend.position = c(0.8, 0.8))
+  theme(legend.position = c(0.8, 0.8)) +
+  scale_fill_manual(values = viridis::viridis(5)[1:4])
 
 ggsave("figures/AUC-real.pdf", width = 850, height = 500, scale = 1 / 100)
+# ggsave("figures/AUC-real.png", width = 850, height = 500, scale = 1 / 100)
