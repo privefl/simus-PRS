@@ -39,9 +39,9 @@ ggplot(auc_small_mult, aes(Trait, mean, fill = Method)) +
   scale_y_continuous(limits = c(0.5, 0.8), minor_breaks = 0:50 / 50,
                      oob = scales::rescale_none) +
   labs(y = "AUC") +
-  theme(legend.position = c(0.85, 0.80))
+  theme(legend.position = c(0.88, 0.80))
 
-ggsave("figures/AUC-real-small-mult.pdf", width = 870, height = 600, scale = 1 / 100)
+ggsave("figures/AUC-real-small-mult.pdf", width = 900, height = 550, scale = 1 / 100)
 
 auc_small_mult %>%
   mutate_at(3:5, ~ round(. * 100, 1)) %>%

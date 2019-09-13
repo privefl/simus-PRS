@@ -24,7 +24,7 @@ auc_simu <- res_simu %>%
          )) %>%
   unnest()
 
-ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
+ggplot(auc_simu, aes(simu, mean, fill = Method)) +
   bigstatsr::theme_bigstatsr() +
   geom_hline(yintercept = 0.5, linetype = 2) +
   geom_hline(yintercept = 0.875, linetype = 3, color = "blue") +
@@ -34,7 +34,8 @@ ggplot(auc_simu, aes(simu, mean, fill = Method, color = Method)) +
   scale_y_continuous(limits = c(0.5, 0.9), minor_breaks = 0:50 / 50,
                      oob = scales::rescale_none) +
   labs(x = "Simulation", y = "AUC") +
-  theme(legend.position = c(0.37, 0.85))
+  theme(legend.position = c(0.37, 0.85)) +
+  scale_fill_manual(values = viridis::viridis(5)[1:4])
 
 ggsave("figures/AUC-simu2.pdf", width = 870, height = 600, scale = 1 / 100)
 
