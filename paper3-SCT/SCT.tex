@@ -91,9 +91,7 @@ Polygenic prediction has the potential to contribute to precision medicine. Clum
 test several p-value thresholds to maximize predictive ability of the derived polygenic scores. Along
 with this p-value threshold, we propose to tune three other hyper-parameters for C+T. We implement an
 efficient way to derive thousands of different C+T polygenic scores corresponding to a grid over four hyper-parameters. For example, it takes a few hours to derive 123,200 different C+T scores for 300K individuals and 1M variants on a single node with 16 cores. 
-
-We find that optimizing over these four hyper-parameters improves the predictive performance of C+T in both simulations and real data applications as compared to tuning only the p-value threshold. A particularly large increase can be noted when predicting depression status, from an AUC of 0.557 (95\% CI: [0.544-0.569]) when tuning only the p-value threshold in C+T to an AUC of 0.592 (95\% CI: [0.580-0.604]) when tuning all four hyper-parameters we propose for C+T. %Overall, by optimizing C+T polygenic scores, one can achieve prediction accuracies on par with more sophisticated approaches such as lassosum.
-
+We find that optimizing over these four hyper-parameters improves the predictive performance of C+T in both simulations and real data applications as compared to tuning only the p-value threshold. A particularly large increase can be noted when predicting depression status, from an AUC of 0.557 (95\% CI: [0.544-0.569]) when tuning only the p-value threshold in C+T to an AUC of 0.592 (95\% CI: [0.580-0.604]) when tuning all four hyper-parameters we propose for C+T.
 We further propose Stacked Clumping and Thresholding (SCT), a polygenic score that results from stacking all derived C+T scores. Instead of choosing one set of hyper-parameters that maximizes prediction in some training set, SCT learns an optimal linear combination of all C+T scores by using an efficient penalized regression. We apply SCT to 8 different case-control diseases in the UK biobank data and find that SCT substantially improves prediction accuracy with an average AUC increase of 0.035 over standard C+T.
 }
 
@@ -153,7 +151,7 @@ We refer to this method as ``SCT'' (Stacked Clumping and Thresholding) in the re
 From this grid of 123,200 vectors of polygenic scores, we also derive two C+T scores for comparison.
 First, ``stdCT'' is the standard C+T score using some default parameters, i.e.\ with $r_c^2$ = 0.2, $w_c$ = 500, a liberal threshold of 0.3 on imputation INFO score, and choosing the p-value threshold ($\ge 10^{-8}$) maximizing the AUC on the training set \cite[]{wray2014research}.
 Second, ``maxCT'' is the C+T score maximizing the AUC on the training set among the 5600 (123200 / 22) C+T scores corresponding to all different sets of parameters tested.
-Note that the set used to choose optimal hyper-parameters is commonly called ``validation set'', yet, as it refers to the same set used for learning weights of stacking in SCT, we uniformly refer to this set as ``training set'' here. 
+Although the set used to choose optimal hyper-parameters is commonly called ``validation set'', we refer to this set as ``training set'' here because it is also the set used for learning weights of stacking.
 Also note that stdCT and maxCT use the same set of parameters for all chromosomes, i.e.\ for one set of the four hyper-parameters, they are defined as ${V}^{(1)} + \cdots + {V}^{(22)}$.
 In contrast, SCT uses the whole matrix of 123,200 vectors.
 
@@ -225,7 +223,7 @@ If we remove these ambiguous SNPs, 1,145,260 variants are matched with UKBB, of 
 
 The code to reproduce the analyses and figures of this paper is available as R scripts at \url{https://github.com/privefl/simus-PRS/tree/master/paper3-SCT} \cite[]{r2018}.
 To execute these scripts, you need to have access to the UK Biobank data that we are not allowed to share  (\url{http://www.ukbiobank.ac.uk/}).
-A quick introduction to SCT is also available at \url{https://privefl.github.io/bigsnpr/articles/SCT.html}.
+An introduction to SCT is also available at \url{https://privefl.github.io/bigsnpr/articles/SCT.html}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -265,7 +263,7 @@ For all 8 diseases, predictions were optimized when choosing a threshold on impu
 \end{figure}
 
 \begin{table}[h]
-\caption{Choice of C+T parameters based on the maximum AUC in the training set. Choosing optimal hyper-parameters for C+T use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. Resulting predictions of maxCT in the test set are reported in figure \ref{fig:AUC-real}.\label{tab:param}}
+\caption{Choice of C+T parameters based on the maximum AUC in the training set. Hyper-parameters of C+T are the squared correlation threshold $r_c^2$ and the window size $w_c$ of clumping, the p-value threshold $p_T$ and the threshold on the quality of imputation $\text{INFO}_T$. Choosing optimal hyper-parameters for C+T use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. Resulting predictions of maxCT in the test set are reported in figure \ref{fig:AUC-real}.\label{tab:param}}
 \vspace*{0.5em}
 \centering
 \begin{tabular}{|l|c|c|c|c|}
@@ -303,9 +301,12 @@ LDpred performs much better than the other methods for predicting MDD, yet maxCT
 C+T is an intuitive and easily applicable method for obtaining polygenic scores trained on GWAS summary statistics. Two popular software packages that implement C+T, namely PLINK and PRSice, have further contributed to the prevalence of C+T \cite[]{purcell2007plink,euesden2014prsice,chang2015second}.
 Usually, C+T scores for different p-value thresholds are derived, using some default values for the other 3 hyper-parameters.
 In R package bigsnpr, we extend C+T to efficiently consider more hyper-parameters (4 by default) and enable the user to define their own qualitative variant annotations to filter on.
-Using simulated and real data, we show that choosing different values rather than default ones for these hyper-parameters can substantially improve the performance of C+T, making C+T a very competitive method.
+Using simulated and real data, we show that choosing optimized hyper-parameter values rather than default ones can substantially improve the performance of C+T, making C+T a very competitive method.
 Indeed, in our simulations (Figure \ref{fig:AUC-simu1}), we found that optimizing C+T (maxCT) performed on par with more sophisticated methods such as lassosum and LDpred.
+
 Moreover, it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include variants with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures \ref{fig:grid-RA} and \ref{fig:grid-MDD}). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure \ref{fig:grid-CAD}), or to focus on a finer grid of stringent imputation thresholds only (Table \ref{tab:param}). 
+One can of course also optimize lassosum and LDpred, which could result in better relative performance. For instance, recent work by \cite{marquez2018modeling} suggests that excluding long-range LD regions when applying LDpred can improve its predictive performance. A possible upcoming feature of LDpred is to allocate heritability estimation differently along the genome. Also, LDpred has been reported to not adequately adjust for the LD structure when sample size of summary statistics is large, and that using alternative methods such as PRS-CS may solve this issue \cite[]{ge2019polygenic}.
+However, we did not explore non-standard parameter settings for applications of LDpred and lassosum, or extensions of LDpred.
 
 Table \ref{tab:param} shows that the optimal parameters of C+T are very different depending on which trait is analyzed. For instance, T1D and PRCA have similar optimal parameters (a stringent clumping $r_c^2$ and p-value threshold $p_T$ of $10^{-5}$), while RA, T2D, MDD and CAD perform also similarly (a lenient clumping $r_c^2$ and p-value threshold). The first group captures a small set of variants with relatively large effects while the second group captures a multitude of small effects. A possible explanation is that traits of the second group are much more polygenic than in the first group. Another possible explanation is that variants associated with the second group have smaller effects that are more difficult to detect, and including more variants (possibly a lot being noise) provides higher predictive performance. 
 
@@ -313,9 +314,9 @@ Using a large grid of C+T scores for different hyper-parameters, we show that st
 Combining multiple PRS is not a new idea \cite[]{krapohl2018multi,inouye2018genomic}, but we push this idea to the limit by combining 123,200 polygenic scores.
 This makes SCT more flexible than any C+T model, but it of course also requires a larger training dataset with individual-level genotypes and phenotypes to learn the weights in stacking.
 
-Normally, cross-validation should be used to prevent overfitting when using stacking and it is also suggested to use positivity constraints in stacking \cite[]{breiman1996stacked}.
+Normally, cross-validation should be used to prevent overfitting when using stacking \cite[]{breiman1996stacked}.
 However, cross-validation is not necessary here since building C+T scores does not make use of the phenotype of the training set that is later used for stacking.
-Moreover, we allow C+T scores to have negative weights in the final model for three reasons. First, because C+T scores are overlapping in the variants they use, using some negative weights allows to weight groups of variants that correspond to the difference of two sets of variants.
+Moreover, altough it has been suggested to use positivity constraints in stacking \cite[]{breiman1996stacked}, we allow C+T scores to have negative weights in the final model for three reasons. First, because C+T scores are overlapping in the variants they use, using some negative weights allows to weight groups of variants that correspond to the difference of two sets of variants.
 Second, because of LD, variants may have different effects when learned jointly with others (Figures \ref{fig:neweff1M} and \ref{fig:neweffHLA}).
 Third, if reported GWAS effects are heterogenous between the GWAS dataset and the validation or target dataset, then having variants with opposite effects can help to adjust the effects learned during GWAS.
 
@@ -330,7 +331,7 @@ Phenotypes with tiny effects such as educational attainment for which huge GWAS 
 The principal aim of this work is to study and improve the widely used C+T method.
 The idea behind C+T is simple as it directly uses weights learned from GWAS; it further removes variants as one often does when reporting hits from GWAS, i.e.\ only variants that pass the genome-wide threshold (p-value thresholding) and that are independent association findings (clumping) are reported.
 Yet, there are two other established methods based on summary statistics, LDpred and lassosum \cite[]{vilhjalmsson2015modeling,mak2017polygenic,allegrini2019genomic}. Several other promising and more complex methods such as NPS, PRS-CS and SBayesR are currently being developed \cite[]{chun2019non,ge2019polygenic,lloyd2019improved}.
-One could also consider other variants of C+T such as choosing a different set of hyper-parameters for each chromosome separately, which would make a lot of sense e.g. in the ``2chr'' simulation scenario.
+One could also consider other variants of C+T such as choosing a different set of hyper-parameters for each chromosome separately, which would be beneficial in the ``2chr'' simulation scenario where genetic architecture differs between chromosomes.
 %Some of these methods require only a small reference panel to account for LD while other methods require retraining using a training set with individual-level data and phenotypes.
 Here, we include lassosum in the comparisons since no other method has yet shown that they provide any improvement over lassosum.
 In addition, we found lassosum to be easy to use.
@@ -353,7 +354,7 @@ This is an area of future development; for now, if sample size is not too large,
 
 One might also want to use other information such as sex or ancestry (using principal components). Indeed, it is easy to add covariates in the stacking step as (possibly unpenalized) variables in the penalized regression. Yet, adding covariates should be done with caution (see the example of CAD at the end of supplementary materials). 
 
-Finally, note that there is an extra parameter in the SCT pipeline that makes possible for an user to define their own groups of variants. This allows to refine the grid of computed C+T scores and opens many possibilities for SCT.
+Finally, note that there is an extra parameter in the SCT pipeline that makes possible for an user to define their own groups of variants. This allows to extend the grid of computed C+T scores and opens many possibilities for SCT.
 For example, we could derive and stack C+T scores for two (or more) different GWAS summary statistics, e.g.\ for different ancestries or for different phenotypes. This would effectively extend SCT as a multivariate method.
 We could also add other hyper-parameters to C+T, such as a threshold on the minor allele frequency (MAF). Indeed, it has been shown that imputation accuracy depends on both INFO score and MAF \cite[]{palmer2016bias}. 
 For MDD, we tested to add a threshold on MAF as a fifth hyper-parameter of C+T. This improved AUC of maxCT from 59.2\% to 60.7\% (Figure \ref{fig:grid-MAF}). For maxCT, the optimal threshold on MAF among $\{10^{-6}, 10^{-5}, ..., 10^{-1}\}$ was 0.01 (Figure \ref{fig:grid-MAF}). Note that this threshold on MAF now makes maxCT more predictive than LDpred that internally uses a MAF threshold of 0.01 by default.
@@ -365,7 +366,7 @@ Note that it might be more efficient to construct one hyper-parameter combining 
 
 In this paper, we focused on understanding and improving the widely-used C+T method by testing a wide range of hyper-parameters values. More broadly, we believe that any implementation of statistical methods should come with an easy and effective way to choose hyper-parameters of these methods well.
 We believe that C+T will continue to be used for many years as it is both simple to use and intuitive.
-Moreover, as we show here, when C+T is optimized using a large grid of hyper-parameters, it becomes a very competitive method since it can adapt to many different disease architectures by tuning all hyper-parameters.
+Moreover, as we show here, when C+T is optimized using a large grid of hyper-parameters, it becomes a very competitive method since it can adapt to many different disease architectures by tuning a large set of hyper-parameters.
 
 Moreover, instead of choosing one set of hyper-parameters, we show that stacking C+T predictions improves predictive performance further, as long as training size is not too small.
 SCT has many advantages over any single C+T prediction: first, it can learn different architecture models for different chromosomes, it can learn a mixture of large and small effects and it can more generally adapt initial weights of the GWAS in order to maximize prediction.
