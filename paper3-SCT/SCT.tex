@@ -27,7 +27,7 @@
 %\doublespacing
 \onehalfspacing
 %\usepackage[authoryear]{natbib}
-\usepackage{natbib} \bibpunct{(}{)}{;}{author-year}{}{,}
+\usepackage[numbers,super]{natbib} %\bibpunct{(}{)}{;}{author-year}{}{,}
 
 %Pour les rajouts
 \usepackage{color}
@@ -86,13 +86,22 @@
 \newpage
 
 \abstract{
-Polygenic prediction has the potential to contribute to precision medicine. Clumping and Thresholding
-(C+T) is a widely used method to derive polygenic scores. When using C+T, it is common to
-test several p-value thresholds to maximize predictive ability of the derived polygenic scores. Along
-with this p-value threshold, we propose to tune three other hyper-parameters for C+T. We implement an
-efficient way to derive thousands of different C+T polygenic scores corresponding to a grid over four hyper-parameters. For example, it takes a few hours to derive 123,200 different C+T scores for 300K individuals and 1M variants on a single node with 16 cores. 
-We find that optimizing over these four hyper-parameters improves the predictive performance of C+T in both simulations and real data applications as compared to tuning only the p-value threshold. A particularly large increase can be noted when predicting depression status, from an AUC of 0.557 (95\% CI: [0.544-0.569]) when tuning only the p-value threshold in C+T to an AUC of 0.592 (95\% CI: [0.580-0.604]) when tuning all four hyper-parameters we propose for C+T.
-We further propose Stacked Clumping and Thresholding (SCT), a polygenic score that results from stacking all derived C+T scores. Instead of choosing one set of hyper-parameters that maximizes prediction in some training set, SCT learns an optimal linear combination of all C+T scores by using an efficient penalized regression. We apply SCT to 8 different case-control diseases in the UK biobank data and find that SCT substantially improves prediction accuracy with an average AUC increase of 0.035 over standard C+T.
+Polygenic prediction has the potential to contribute to precision medicine. Clumping and Thresh-
+olding (C+T) is a widely used method to derive polygenic scores. When using C+T, several p-value thresholds are tested to maximize predictive ability of the derived polygenic scores. Along
+with this p-value threshold, we propose to tune three other hyper-parameters for C+T. We implement
+an efficient way to derive thousands of different C+T scores corresponding to a grid over
+four hyper-parameters. For example, it takes a few hours to derive 123K different C+T scores for
+300K individuals and 1M variants using 16 physical cores. We find that optimizing over these
+four hyper-parameters improves the predictive performance of C+T in both simulations and real data
+applications as compared to tuning only the p-value threshold. A particularly large increase can be
+noted when predicting depression status, from an AUC of 0.557 (95\% CI: [0.544-0.569]) when tun-
+ing only the p-value threshold to an AUC of 0.592 (95\% CI: [0.580-0.604]) when tuning all
+four hyper-parameters we propose for C+T. We further propose Stacked Clumping and Thresholding
+(SCT), a polygenic score that results from stacking all derived C+T scores. Instead of choosing one
+set of hyper-parameters that maximizes prediction in some training set, SCT learns an optimal linear
+combination of all C+T scores by using an efficient penalized regression. We apply SCT to 8 differ-
+ent case-control diseases in the UK biobank data and find that SCT substantially improves prediction
+accuracy with an average AUC increase of 0.035 over standard C+T.
 }
 
 
@@ -158,7 +167,7 @@ In contrast, SCT uses the whole matrix of 123,200 vectors.
 
 \subsection{Simulations}
 
-We use variants from the UK Biobank (UKBB) imputed dataset that have a minor allele frequency larger than 1\% and an imputation INFO score larger than 0.3. There are almost 10M such variants, of which we randomly choose 1M in two different ways. First, we randomly sample 1M from these 10M variants, so we use variants that are mainly well imputed (Figure \ref{fig:hist1}). Second, we sample variants according to the inverse of INFO score density, so we use variants that are globally not as well imputed as before (Figure \ref{fig:hist2}).
+We use variants from the UK Biobank (UKBB) imputed dataset that have a minor allele frequency larger than 1\% and an imputation INFO score larger than 0.3. There are almost 10M such variants, of which we randomly choose 1M in two different ways. First, we randomly sample 1M from these 10M variants, so we use variants that are mainly well imputed (Figure S1a). Second, we sample variants according to the inverse of INFO score density, so we use variants that are globally not as well imputed as before (Figure S1b).
 
 To limit population structure and family structure, we restrict individuals to the ones identified by the UK Biobank as British with only subtle structure and exclude all second individuals in each pair reported by the UK Biobank as being related \cite[]{bycroft2017genome}.
 This results in a total of 335,609 individuals that we split into three sets: a set of 315,609 individuals for computing summary statistics (GWAS), a set of 10,000 individuals for training hyper-parameters and lastly a test set of 10,000 individuals for evaluating models.
@@ -176,7 +185,7 @@ In scenario ``2chr'', 100 variants of chromosome 1 and all variants of chromosom
 In scenario ``err'', we sample 10K random causal variants but 10\% of the GWAS effects (causal or not) are reported with an opposite effect in the summary statistics; it aims at assessing if methods are able to partially correct for errors or mere differences in effect sizes between GWAS and the target data.
 In scenario ``HLA'', 7105 causal variants are chosen in one long-range LD region of chromosome 6; it aims at assessing if methods can handle strong correlation between causal variants.
 
-To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we restricted the data to have minimal population structure, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (a few minutes vs several hours) while providing similar effect sizes and Z-scores (Figure \ref{fig:GWAS}).
+To compute summary statistics, we use Cochran-Armitage additive test \cite[]{zheng2012analysis}. Given that we restricted the data to have minimal population structure, this test based on contingency tables is much faster than using a logistic regression with 10 principal components as covariates (a few minutes vs several hours) while providing similar effect sizes and Z-scores (Figure S2).
 
 In simulations, we compare five methods: stdCT, maxCT, SCT (defined in section \ref{SCT}), lassosum \cite[]{mak2017polygenic} and LDpred \cite[]{vilhjalmsson2015modeling}. Each simulation scenario is repeated 10 times and the average AUC is reported. We prefer to use AUC over Nagelkerke's $R^2$ because AUC has a desirable property of being independent of the proportion of cases in the validation sample; one definition of AUC is the probability that the score of a randomly selected case is larger than the score of a randomly selected control \cite[]{wray2013pitfalls}. An alternative to AUC would be to use a better $R^2$ on the liability scale \cite[]{lee2012better,choi2018guide}.
 
@@ -193,25 +202,7 @@ Table \ref{tab:sumstats} summarizes the number of cases and controls in the UKBB
 For details on how we define phenotypes in the UKBB, please refer to our R code (Section \ref{repro}).
 Briefly, we use self-reported illness codes (field \#20001 for cancers and \#20002 otherwise) and ICD10 codes (fields \#40001, \#40002, \#41202 and \#41204 for all diseases, and field \#40006 specifically for cancers).
 
-\begin{table}[h]
-\caption{Number of cases and controls in UK Biobank (UKBB) for several disease phenotypes, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS from which we use summary statistics.\label{tab:sumstats}}
-\vspace*{0.5em}
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-  \hline
-Trait & UKBB size -- training (\%) & GWAS size & GWAS \#variants & GWAS citation \\
-  \hline
-Breast cancer (BRCA) & ~~11,578 / 158,391 -- 150,000 (88) & 137,045 / 119,078 & 11,792,542 & \cite{michailidou2017association} \\
-Rheumatoid arthritis (RA) & ~~~~~5615 / 226,327 -- 200,000 (86) & ~~29,880 / ~~73,758 & ~~9,739,303 & \cite{okada2014genetics} \\
-Type 1 diabetes (T1D) & ~~~~~~~771 / 314,547 -- 200,000 (63) & ~~~~~5913 / ~~~~~8828  & ~~8,996,866 & \cite{censin2017childhood} \\
-Type 2 diabetes (T2D) & ~~14,176 / 314,547 -- 250,000 (76) & ~~26,676 / 132,532 & 12,056,346 & \cite{scott2017expanded} \\
-Prostate cancer (PRCA) & ~~~~~6643 / 141,321 -- 120,000 (81) & ~~79,148 / ~~61,106 & 20,370,946 & \cite{schumacher2018association} \\
-Depression (MDD) & ~~22,287 / 255,317 -- 250,000 (90) & ~~59,851 / 113,154 & 13,554,550 & \cite{wray2018genome} \\
-Coronary artery disease (CAD) & ~~12,263 / 225,927 -- 200,000 (84) & ~~60,801 / 123,504 & ~~9,455,778 & \cite{nikpay2015comprehensive} \\
-Asthma & ~~43,787 / 261,985 -- 250,000 (82) & ~~19,954 / 107,715 & ~~2,001,280 & \cite{demenais2018multiancestry} \\
-  \hline
-\end{tabular}
-\end{table}
+%% TABLE 1 HERE
 
 We keep all variants with a GWAS p-value lower than 0.1, except for prostate cancer (0.05) and asthma (0.5). This way, we keep around 1M variants for each phenotype, deriving all C+T scores and stacking them in SCT in less than one day for each phenotype, even when using 300K individuals in the training set.
 To match variants from summary statistics with data from the UK Biobank, we first remove ambiguous alleles [A/T] and [C/G]. We then augment the summary statistics twice: first by duplicating each variant with the complementary alleles, then by duplicating variants with reverse alleles and effects. Finally, we include only variants that we match with UKBB based on the combination of chromosome, position and the two alleles.
@@ -234,63 +225,37 @@ An introduction to SCT is also available at \url{https://privefl.github.io/bigsn
 We test 6 different simulations scenarios.
 In all these scenarios, maxCT --that tests a much larger grid of hyper-parameters values for C+T on the training set-- consistently provides higher AUC values on the test set as compared to stdCT that tests only several p-value thresholds while using default values for the other parameters (Figure \ref{fig:AUC-simu1}).
 The absolute improvement in AUC of maxCT over stdCT is particularly large in the cases of 100 and 10,000 causal variants, where causal effects are mostly independent of one another.
-In these cases, using a very stringent $r_c^2 = 0.01$ threshold of clumping provides higher predictive performance than using a standard default of $r_c^2 = 0.2$ (Figures \ref{fig:simugridA} and \ref{fig:simugridB}). However, $r_c^2 = 0.2$ provides best predictive performance when simulating 1M causal variants. Still, in this scenario, using a large window size $w_c$ of 2500 kb increases AUC as compared to using default values of either 250 or 500 kb (Figure \ref{fig:simugridC}).
+In these cases, using a very stringent $r_c^2 = 0.01$ threshold of clumping provides higher predictive performance than using a standard default of $r_c^2 = 0.2$ (Figures S6a and S6b). However, $r_c^2 = 0.2$ provides best predictive performance when simulating 1M causal variants. Still, in this scenario, using a large window size $w_c$ of 2500 kb increases AUC as compared to using default values of either 250 or 500 kb (Figure S6c).
 
-\begin{figure}[h]
-\centerline{\includegraphics[width=0.8\textwidth]{AUC-simu1.pdf}}
-\caption{Results of the 6 simulation scenarios with well imputed variants: (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}). See corresponding values in table \ref{tab:AUC-simu1}.}
-\label{fig:AUC-simu1}
-\end{figure}
+%% FIGURE 1 HERE
 
 As for SCT, it provides equal or higher predictive performance than maxCT in the different simulation scenarios (Figure \ref{fig:AUC-simu1}). In the first three simple scenarios simulating 100, 10K or 1M causal variants anywhere on the genome, predictive performance of SCT are similar to maxCT. In the ``2chr'' scenario where there are large effects on chromosome 1, small effects on chromosome 2 and no effect on other chromosomes, mean AUC is 78.7\% for maxCT and 82.2\% for SCT. In the ``err'' scenario where we report GWAS summary statistics with 10\% opposite effects (errors or mere differences), mean AUC is 70.2\% for maxCT and 73.2\% for SCT.
 In these simulations, lassosum and LDpred do not provide the best predictive performance, expect when simulating all variants as causal (1M).
 
-Results are similar when using less well imputed variants in the simulations. Globally in these simulations, including a broad range of imputed variants with INFO score as low as 0.3 often maximizes prediction (Figures \ref{fig:simu1grid} and \ref{fig:simu2grid}).
+Results are similar when using less well imputed variants in the simulations. Globally in these simulations, including a broad range of imputed variants with INFO score as low as 0.3 often maximizes prediction (Figures S6 and S7).
 
-Effects resulting from SCT (Figure \ref{fig:neweffsimu}) are mostly comprised between the GWAS effects and 0. For the simulation with only 100 causal variants, resulting effects are either nearly the same as in the GWAS, or near 0 (or exactly 0).
+Effects resulting from SCT (Figure S5) are mostly comprised between the GWAS effects and 0. For the simulation with only 100 causal variants, resulting effects are either nearly the same as in the GWAS, or near 0 (or exactly 0).
 When there are some correlation between causal predictors (Scenarios ``1M'' and ``HLA'') or when reporting GWAS effects with some opposite effect (``err''), some effects resulting from SCT are in the opposite direction as compared to the GWAS effects.
 
 \subsection{Real summary statistics}
 
-In terms of AUC, maxCT outperfoms stdCT for all 8 diseases considered with a mean absolute increase of 1.3\% (Figures \ref{fig:AUC-real} and \ref{fig:AUC-real-small}).
-A particularly large increase can be noted when predicting depression status (MDD), from an AUC of 55.7\% (95\% CI: [54.4-56.9]) with stdCT to an AUC of 59.2\% (95\% CI: [58.0-60.4]) with maxCT. For MDD, a liberal inclusion in clumping ($r_c^2$ = 0.8) and a stringent threshold on imputation accuracy ($\text{INFO}_T$ = 0.95) provides the best predictive performance (Figure \ref{fig:grid-MDD}).
+In terms of AUC, maxCT outperfoms stdCT for all 8 diseases considered with a mean absolute increase of 1.3\% (Figures \ref{fig:AUC-real} and S4).
+A particularly large increase can be noted when predicting depression status (MDD), from an AUC of 55.7\% (95\% CI: [54.4-56.9]) with stdCT to an AUC of 59.2\% (95\% CI: [58.0-60.4]) with maxCT. For MDD, a liberal inclusion in clumping ($r_c^2$ = 0.8) and a stringent threshold on imputation accuracy ($\text{INFO}_T$ = 0.95) provides the best predictive performance (Figure S9f).
 For all 8 diseases, predictions were optimized when choosing a threshold on imputation accuracy of at least 0.9, whereas optimal values for $r_c^2$ where very different depending on the architecture of diseases, with optimal selected values over the whole range of tested values for $r_c^2$ (Table \ref{tab:param}).
 
-\begin{figure}[h]
-\centerline{\includegraphics[width=0.8\textwidth]{AUC-real.pdf}}
-\caption{AUC values on the test set of UKBB (mean and 95\% CI from $10^4$ bootstrap samples). Training SCT and choosing optimal hyper-parameters for C+T and lassosum use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. See corresponding values in table \ref{tab:AUC}.}
-\label{fig:AUC-real}
-\end{figure}
+%% FIGURE 2 HERE
 
-\begin{table}[h]
-\caption{Choice of C+T parameters based on the maximum AUC in the training set. Hyper-parameters of C+T are the squared correlation threshold $r_c^2$ and the window size $w_c$ of clumping, the p-value threshold $p_T$ and the threshold on the quality of imputation $\text{INFO}_T$. Choosing optimal hyper-parameters for C+T use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. Resulting predictions of maxCT in the test set are reported in figure \ref{fig:AUC-real}.\label{tab:param}}
-\vspace*{0.5em}
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-  \hline
-Trait & $w_c$ & $r_c^2$ & $\text{INFO}_T$ & $p_T$ \\
-  \hline
-Breast cancer (BRCA)          & 2500    & 0.2  & 0.95 & 2.2e-04 \\
-Rheumatoid arthritis (RA)     & 200     & 0.5  & 0.95 & 7.5e-02 \\
-Type 1 diabetes (T1D)         & 10K-50K & 0.01 & 0.90 & 2.6e-05 \\
-Type 2 diabetes (T2D)         & 625     & 0.8  & 0.95 & 1.1e-02 \\
-Prostate cancer (PRCA)        & 10K-50K & 0.01 & 0.90 & 4.2e-06 \\
-Depression (MDD)              & 625     & 0.8  & 0.95 & 1.0e-01 \\
-Coronary artery disease (CAD) & 526     & 0.95 & 0.95 & 3.5e-02 \\
-Asthma                        & 2500    & 0.2  & 0.90 & 2.2e-04 \\
-   \hline
-\end{tabular}
-\end{table}
+%% TABLE 2 HERE
 
-Furthermore, when training size uses a large proportion of the UK Biobank data, SCT outperforms maxCT for all 8 diseases considered with an additional mean absolute increase of AUC of 2.2\%, making it 3.5\% as compared to stdCT (Figure \ref{fig:AUC-real} and table \ref{tab:AUC}).
+Furthermore, when training size uses a large proportion of the UK Biobank data, SCT outperforms maxCT for all 8 diseases considered with an additional mean absolute increase of AUC of 2.2\%, making it 3.5\% as compared to stdCT (Figure \ref{fig:AUC-real} and table S2).
 Predictive performance improvement of SCT versus maxCT is particularly notable for coronary artery disease (2.8\%), type 2 diabetes (3.1\%) and asthma (3.4\%).
 
-Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with few effects being largely unchanged, and others having an effect that is shrunk to 0 or equals to 0, i.e.\ variants not included in the final model (Figure \ref{fig:neweffreal}).
+Effects resulting from SCT have mostly the same sign as initial effects from GWAS, with few effects being largely unchanged, and others having an effect that is shrunk to 0 or equals to 0, i.e.\ variants not included in the final model (Figure S8).
 
-When training size is smaller (500 cases and 2000 controls only instead of 120K-250K individuals), SCT is not as good as when training size is large, yet SCT remains a competitive method expect for depression for which maxCT performs much better than all other methods (Figure \ref{fig:AUC-real-small}).
+When training size is smaller (500 cases and 2000 controls only instead of 120K-250K individuals), SCT is not as good as when training size is large, yet SCT remains a competitive method expect for depression for which maxCT performs much better than all other methods (Figure S4).
 Performance of C+T and lassosum, methods that use the training set for choosing optimal hyper-parameters only, as opposed to SCT that learns new weights, are little affected by using a smaller training size. 
-However, even though lassosum can provide more accurate prediction for T2D and CAD, it can also perform very poorly for other diseases such as BRCA, PRCA and MDD (Figures \ref{fig:AUC-real} and \ref{fig:AUC-real-small}). 
-LDpred performs much better than the other methods for predicting MDD, yet maxCT and SCT perform equally or better than LDpred for the 7 other traits (Figure \ref{fig:AUC-real-small}).
+However, even though lassosum can provide more accurate prediction for T2D and CAD, it can also perform very poorly for other diseases such as BRCA, PRCA and MDD (Figures \ref{fig:AUC-real} and S4). 
+LDpred performs much better than the other methods for predicting MDD, yet maxCT and SCT perform equally or better than LDpred for the 7 other traits (Figure S4).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -304,9 +269,8 @@ In R package bigsnpr, we extend C+T to efficiently consider more hyper-parameter
 Using simulated and real data, we show that choosing optimized hyper-parameter values rather than default ones can substantially improve the performance of C+T, making C+T a very competitive method.
 Indeed, in our simulations (Figure \ref{fig:AUC-simu1}), we found that optimizing C+T (maxCT) performed on par with more sophisticated methods such as lassosum and LDpred.
 
-Moreover, it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include variants with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures \ref{fig:grid-RA} and \ref{fig:grid-MDD}). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure \ref{fig:grid-CAD}), or to focus on a finer grid of stringent imputation thresholds only (Table \ref{tab:param}). 
-One can of course also optimize lassosum and LDpred, which could result in better relative performance. For instance, recent work by \cite{marquez2018modeling} suggests that excluding long-range LD regions when applying LDpred can improve its predictive performance. A possible upcoming feature of LDpred is to allocate heritability estimation differently along the genome. Also, LDpred has been reported to not adequately adjust for the LD structure when sample size of summary statistics is large, and that using alternative methods such as PRS-CS may solve this issue \cite[]{ge2019polygenic}.
-However, we did not explore non-standard parameter settings for applications of LDpred and lassosum, or extensions of LDpred.
+Moreover, it is possible to rerun the method using a finer grid in a particular range of these hyper-parameters. For example, it might be useful to include variants with p-values larger than 0.1 for predicting rheumatoid arthritis and depression (Figures S9b and S9f). Another example would be to focus on a finer grid of large values of $r_c^2$ for coronary artery disease (Figure S9g), or to focus on a finer grid of stringent imputation thresholds only (Table \ref{tab:param}). 
+One can of course also optimize lassosum and LDpred, which could result in better relative performance. One limitation of LDpred is that its non-infinitesimal version is a Gibbs sampler, which can become unstable if the data does not fit the model well. In practice, this affects the robustness of LDpred and becomes more severe when applied to summary statistics with large sample sizes. Indeed, LDpred has been reported to not adequately adjust for LD structure when sample size of summary statistics is large, and that using alternative methods such as PRS-CS may solve this issue \cite[]{ge2019polygenic}. Alternatively, recent work also suggests that excluding long-range LD regions when applying LDpred can improve its predictive performance \cite{marquez2018modeling,lloyd2019improved}. It may therefore be possible to improve the robustness of the LDpred Gibbs sampler by handling LD and heritability estimation more carefully. When applying LDpred and lassosum, we did not explore non-standard parameter settings or extensions of LDpred.
 
 Table \ref{tab:param} shows that the optimal parameters of C+T are very different depending on which trait is analyzed. For instance, T1D and PRCA have similar optimal parameters (a stringent clumping $r_c^2$ and p-value threshold $p_T$ of $10^{-5}$), while RA, T2D, MDD and CAD perform also similarly (a lenient clumping $r_c^2$ and p-value threshold). The first group captures a small set of variants with relatively large effects while the second group captures a multitude of small effects. A possible explanation is that traits of the second group are much more polygenic than in the first group. Another possible explanation is that variants associated with the second group have smaller effects that are more difficult to detect, and including more variants (possibly a lot being noise) provides higher predictive performance. 
 
@@ -317,7 +281,7 @@ This makes SCT more flexible than any C+T model, but it of course also requires 
 Normally, cross-validation should be used to prevent overfitting when using stacking \cite[]{breiman1996stacked}.
 However, cross-validation is not necessary here since building C+T scores does not make use of the phenotype of the training set that is later used for stacking.
 Moreover, altough it has been suggested to use positivity constraints in stacking \cite[]{breiman1996stacked}, we allow C+T scores to have negative weights in the final model for three reasons. First, because C+T scores are overlapping in the variants they use, using some negative weights allows to weight groups of variants that correspond to the difference of two sets of variants.
-Second, because of LD, variants may have different effects when learned jointly with others (Figures \ref{fig:neweff1M} and \ref{fig:neweffHLA}).
+Second, because of LD, variants may have different effects when learned jointly with others (Figures S5c and S5f).
 Third, if reported GWAS effects are heterogenous between the GWAS dataset and the validation or target dataset, then having variants with opposite effects can help to adjust the effects learned during GWAS.
 
 \subsection{Limitations of the study}
@@ -357,7 +321,7 @@ One might also want to use other information such as sex or ancestry (using prin
 Finally, note that there is an extra parameter in the SCT pipeline that makes possible for an user to define their own groups of variants. This allows to extend the grid of computed C+T scores and opens many possibilities for SCT.
 For example, we could derive and stack C+T scores for two (or more) different GWAS summary statistics, e.g.\ for different ancestries or for different phenotypes. This would effectively extend SCT as a multivariate method.
 We could also add other hyper-parameters to C+T, such as a threshold on the minor allele frequency (MAF). Indeed, it has been shown that imputation accuracy depends on both INFO score and MAF \cite[]{palmer2016bias}. 
-For MDD, we tested to add a threshold on MAF as a fifth hyper-parameter of C+T. This improved AUC of maxCT from 59.2\% to 60.7\% (Figure \ref{fig:grid-MAF}). For maxCT, the optimal threshold on MAF among $\{10^{-6}, 10^{-5}, ..., 10^{-1}\}$ was 0.01 (Figure \ref{fig:grid-MAF}). Note that this threshold on MAF now makes maxCT more predictive than LDpred that internally uses a MAF threshold of 0.01 by default.
+For MDD, we tested to add a threshold on MAF as a fifth hyper-parameter of C+T. This improved AUC of maxCT from 59.2\% to 60.7\% (Figure S10). For maxCT, the optimal threshold on MAF among $\{10^{-6}, 10^{-5}, ..., 10^{-1}\}$ was 0.01 (Figure S10). Note that this threshold on MAF now makes maxCT more predictive than LDpred that internally uses a MAF threshold of 0.01 by default.
 This raises questions about the ability of current methods to capture the effects of rare variants, and developing methods that can efficiently use both common and rare variants is a direction of future work.
 Note that it might be more efficient to construct one hyper-parameter combining INFO score and MAF instead of treating them as two distinct hyper-parameters; this is a direction of future work.
 
@@ -375,7 +339,74 @@ Moreover, SCT remains a linear model defined by a single vector of coefficients 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%\newpage
+\newpage
+
+%%%% MAIN TABLES %%%%
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+  \hline
+Trait and GWAS citation & UKBB size -- training (\%) & GWAS size & GWAS \#variants \\
+  \hline
+Breast cancer (BRCA) \cite{michailidou2017association} & ~~11,578 / 158,391 -- 150,000 (88) & 137,045 / 119,078 & 11,792,542 \\
+Rheumatoid arthritis (RA) \cite{okada2014genetics} & ~~~~~5615 / 226,327 -- 200,000 (86) & ~~29,880 / ~~73,758 & ~~9,739,303 \\
+Type 1 diabetes (T1D) \cite{censin2017childhood} & ~~~~~~~771 / 314,547 -- 200,000 (63) & ~~~~~5913 / ~~~~~8828  & ~~8,996,866 \\
+Type 2 diabetes (T2D) \cite{scott2017expanded} & ~~14,176 / 314,547 -- 250,000 (76) & ~~26,676 / 132,532 & 12,056,346 \\
+Prostate cancer (PRCA) \cite{schumacher2018association} & ~~~~~6643 / 141,321 -- 120,000 (81) & ~~79,148 / ~~61,106 & 20,370,946 \\
+Depression (MDD) \cite{wray2018genome} & ~~22,287 / 255,317 -- 250,000 (90) & ~~59,851 / 113,154 & 13,554,550 \\
+Coronary artery disease (CAD) \cite{nikpay2015comprehensive} & ~~12,263 / 225,927 -- 200,000 (84) & ~~60,801 / 123,504 & ~~9,455,778 \\
+Asthma \cite{demenais2018multiancestry} & ~~43,787 / 261,985 -- 250,000 (82) & ~~19,954 / 107,715 & ~~2,001,280 \\
+  \hline
+\end{tabular}
+\caption{Summary of GWAS data used. Number of cases and controls in UK Biobank (UKBB) for several disease phenotypes, along with corresponding published GWAS summary statistics. Summary statistics are chosen from GWAS that did not include individuals from UKBB. For depression, we remove UKBB individuals from the pilot release since they were included in the GWAS from which we use summary statistics.\label{tab:sumstats}}
+\end{table}
+
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+  \hline
+Trait & $w_c$ & $r_c^2$ & $\text{INFO}_T$ & $p_T$ \\
+  \hline
+Breast cancer (BRCA)          & 2500    & 0.2  & 0.95 & 2.2e-04 \\
+Rheumatoid arthritis (RA)     & 200     & 0.5  & 0.95 & 7.5e-02 \\
+Type 1 diabetes (T1D)         & 10K-50K & 0.01 & 0.90 & 2.6e-05 \\
+Type 2 diabetes (T2D)         & 625     & 0.8  & 0.95 & 1.1e-02 \\
+Prostate cancer (PRCA)        & 10K-50K & 0.01 & 0.90 & 4.2e-06 \\
+Depression (MDD)              & 625     & 0.8  & 0.95 & 1.0e-01 \\
+Coronary artery disease (CAD) & 526     & 0.95 & 0.95 & 3.5e-02 \\
+Asthma                        & 2500    & 0.2  & 0.90 & 2.2e-04 \\
+   \hline
+\end{tabular}
+\caption{Optimal choices of C+T parameters. Choice of C+T parameters is based on the maximum AUC in the training set. Hyper-parameters of C+T are the squared correlation threshold $r_c^2$ and the window size $w_c$ of clumping, the p-value threshold $p_T$ and the threshold on the quality of imputation $\text{INFO}_T$. Choosing optimal hyper-parameters for C+T use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. Resulting predictions of maxCT in the test set are reported in figure \ref{fig:AUC-real}.\label{tab:param}}
+\end{table}
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
+
+%%%% MAIN FIGURES %%%%
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=0.8\textwidth]{AUC-simu1.pdf}}
+\caption{Results of the 6 simulation scenarios with well imputed variants. Scenarios are (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}). See corresponding values in table S1.}
+\label{fig:AUC-simu1}
+\end{figure}
+
+\begin{figure}[h]
+\centerline{\includegraphics[width=0.8\textwidth]{AUC-real.pdf}}
+\caption{Results of the real data applications with large training size.
+AUC values on the test set of UKBB (mean and 95\% CI from $10^4$ bootstrap samples). Training SCT and choosing optimal hyper-parameters for C+T and lassosum use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. See corresponding values in table S2.}
+\label{fig:AUC-real}
+\end{figure}
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 \section*{Acknowledgements}
 
@@ -384,431 +415,17 @@ We are grateful to the two anonymous reviewers who contributed to improving this
 Authors acknowledge LabEx PERSYVAL-Lab (ANR-11-LABX-0025-01) and ANR project FROGH (ANR-16-CE12-0033). Authors also acknowledge the Grenoble Alpes Data Institute that is supported by the French National Research Agency under the ``Investissements d'avenir'' program (ANR-15-IDEX-02).
 This research has been conducted using the UK Biobank Resource under Application Number 25589.
 
+
+~\\ \textit{Declaration of Interests:} the authors declare no competing interests.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %\newpage
 
-\bibliographystyle{natbib}
+\bibliographystyle{ajhg}
 \bibliography{refs}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\newpage
-\section*{Supplementary Materials}
-
-\renewcommand{\thefigure}{S\arabic{figure}}
-\setcounter{figure}{0}
-\renewcommand{\thetable}{S\arabic{table}}
-\setcounter{table}{0}
-
-\vspace*{2em}
-
-\begin{figure}[htbp]
-\centering
-\begin{subfigure}[b]{0.45\textwidth}
-\includegraphics[width=\textwidth]{hist-simu1.png}
-\caption{First simulations}
-\label{fig:hist1}
-\end{subfigure}
-\begin{subfigure}[b]{0.45\textwidth}
-\includegraphics[width=\textwidth]{hist-simu2.png}
-\caption{Second simulations}
-\label{fig:hist2}
-\end{subfigure}
-\caption{Histogram of INFO scores for the 1M variants used in the simulations.}
-\end{figure}
-
-\vspace*{3em}
-
-\begin{figure}[!htpb]
-\centerline{\includegraphics[width=0.9\textwidth]{equivalence.png}}
-\caption{Comparison of estimated effect sizes (\textbf{A}) and Z-scores (\textbf{B}) if computed using a logistic regression with 10 principal components as covariates, or with a simple Cochran-Armitage additive test. Phenotypes were simulated using 100 causal variants only, allowing for large effects.}
-\label{fig:GWAS}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\clearpage
-
-\vspace*{1em}
-
-% latex table generated in R 3.5.2 by xtable 1.8-4 package
-% Tue May 21 19:07:57 2019
-\begin{table}[!htpb]
-\caption{Results of the 6 simulation scenarios with well imputed variants: (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. These results are plotted in figure \ref{fig:AUC-simu1}.\label{tab:AUC-simu1}}
-\vspace*{0.5em}
-\centering
-\begin{tabular}{|l|c|c|c|c|c|}
-  \hline
-Scenario & stdCT & maxCT & SCT & lassosum & LDpred \\ 
-  \hline
-100 & 82.0 [81.6-82.5] & 86.8 [86.4-87.2] & 86.1 [85.7-86.5] & 83.9 [83.5-84.4] & 76.3 [75.7-77.0] \\ 
-  10K & 72.4 [71.5-73.5] & 75.6 [75.1-76.1] & 76.4 [75.9-77.0] & 75.0 [74.4-75.7] & 71.2 [70.6-71.9] \\ 
-  1M & 68.7 [68.1-69.2] & 69.0 [68.3-69.6] & 69.1 [68.6-69.6] & 70.1 [69.5-70.6] & 71.0 [70.3-71.6] \\ 
-  2chr & 77.4 [76.9-78.0] & 78.8 [78.3-79.4] & 82.1 [81.6-82.7] & 79.0 [78.3-79.8] & 74.6 [73.6-75.8] \\ 
-  err & 70.1 [69.3-70.9] & 70.9 [70.5-71.5] & 73.4 [72.8-74.1] & 72.0 [71.3-72.9] & 70.7 [70.1-71.4] \\ 
-  HLA & 78.7 [78.0-79.5] & 79.8 [79.2-80.3] & 80.7 [80.2-81.3] & 79.4 [78.7-80.2] & 76.9 [76.3-77.4] \\ 
-   \hline
-\end{tabular}
-\end{table}
-
-
-\vspace*{6em}
-
-\begin{table}[!htpb]
-\caption{AUC values on the test set of UKBB (mean [95\% CI] from $10^4$ bootstrap samples) and the number of variants used in the final model. Training SCT and choosing optimal hyper-parameters for C+T and lassosum use 63\%-90\% of the individuals reported in table \ref{tab:sumstats}. These results are plotted in figure \ref{fig:AUC-real}.\label{tab:AUC}}
-\vspace*{0.5em}
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-  \hline
-Trait & stdCT & maxCT & SCT & lassosum \\
-  \hline
-Breast cancer (BRCA) & 62.1 [60.5-63.6] & 63.3 [61.7-64.8] & 65.9 [64.4-67.4] & 57.9 [56.3-59.5] \\
- & 6256 & 2572 & 670,050 & 322,003 \\
-Rheumatoid arthritis (RA) & 59.8 [57.7-61.8] & 60.3 [58.3-62.4] & 61.3 [59.1-63.4] & 59.5 [57.5-61.7] \\
- & 12,220 & 88,556 & 317,456 & 672,922 \\
-Type 1 diabetes (T1D) & 75.4 [72.4-78.4] & 76.9 [73.9-79.7] & 78.7 [75.7-81.7] & 75.3 [72.2-78.3] \\
- & 1112 & 267 & 135,991 & 204,785 \\
-Type 2 diabetes (T2D) & 59.1 [58.1-60.1] & 60.7 [59.8-61.7] & 63.8 [62.9-64.7] & 63.2 [62.3-64.1] \\
- & 177 & 33,235 & 548,343 & 256,353 \\
-Prostate cancer (PRCA) & 68.0 [66.5-69.5] & 69.3 [67.8-70.8] & 71.7 [70.2-73.1] & 58.7 [57.1-60.3] \\
- & 1035 & 356 & 696,575 & 121,660 \\
-Depression (MDD) & 55.7 [54.4-56.9] & 59.2 [58.0-60.4] & 59.5 [58.2-60.7] & 52.0 [50.8-53.3] \\
- & 165,584 & 222,912 & 524,099 & 625,732 \\
-Coronary artery disease (CAD) & 59.9 [58.6-61.2] & 61.1 [59.9-62.4] & 63.9 [62.7-65.1] & 63.0 [61.8-64.2] \\
- & 1182 & 87,577 & 315,165 & 290,204 \\
-Asthma & 56.8 [56.2-57.5] & 57.3 [56.7-58.0] & 60.7 [60.0-61.3] & 58.7 [58.1-59.4] \\
- & 3034 & 360 & 446,120 & 75,965 \\
-   \hline
-\end{tabular}
-\end{table}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\clearpage
-
-\vspace*{1em}
-
-\begin{figure}[!htpb]
-\centerline{\includegraphics[width=0.8\textwidth]{AUC-simu2.pdf}}
-\caption{Results of the 6 simulation scenarios with less well imputed variants: (100) 100 random causal variants; (10K) 10,000 random causal variants; (1M) all 1M variants are causal variants; (2chr) 100 variants of chromosome 1 are causal and all variants of chromosome 2, with half of the heritability for both chromosomes; (err) 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect; (HLA) 7105 causal variants in a long-range LD region of chromosome 6. Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 10 simulations for each scenario. The blue dotted line represents the maximum achievable AUC for these simulations (87.5\% for a prevalence of 10\% and an heritability of 50\% -- see equation (3) of \cite{wray2010genetic}). See corresponding values in table \ref{tab:AUC-simu2}.}
-\label{fig:AUC-simu2}
-\end{figure}
-
-
-\vspace*{1em}
-
-% latex table generated in R 3.5.2 by xtable 1.8-4 package
-% Wed Jun 19 15:19:38 2019
-\begin{table}[!htpb]
-\caption{AUC values on the test set for simulations with less well imputed variants (mean [95\% CI] from $10^4$ bootstrap samples). These results are plotted in figure \ref{fig:AUC-simu2}.\label{tab:AUC-simu2}}
-\vspace*{0.5em}
-\centering
-\begin{tabular}{|l|c|c|c|c|}
-\hline
-Scenario & stdCT & maxCT & SCT & lassosum \\ 
-\hline
-100  & 77.4 [76.0-78.8] & 83.9 [83.4-84.4] & 83.1 [82.6-83.6] & 80.1 [79.5-80.8] \\ 
-10K  & 69.4 [68.4-70.5] & 73.0 [72.5-73.4] & 72.9 [72.5-73.3] & 71.2 [70.6-71.7] \\ 
-1M   & 64.0 [63.6-64.4] & 64.0 [63.6-64.4] & 62.7 [62.3-63.0] & 64.1 [63.3-64.8] \\ 
-2chr & 70.0 [68.8-71.2] & 74.4 [73.6-75.2] & 78.5 [77.9-79.1] & 73.2 [72.5-73.8] \\ 
-err  & 67.0 [66.0-68.1] & 68.6 [67.7-69.5] & 69.5 [68.9-70.1] & 65.6 [64.9-66.3] \\ 
-HLA  & 74.8 [72.9-76.3] & 75.3 [73.5-76.9] & 76.4 [74.5-78.0] & 75.8 [74.2-77.2] \\ 
-\hline
-\end{tabular}
-\end{table}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\clearpage
-\vspace*{3em}
-
-\begin{figure}[!htpb]
-\centerline{\includegraphics[width=0.8\textwidth]{AUC-real-small-mult.pdf}}
-\caption{Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 6 random splits to define the training set. Training SCT and choosing optimal hyper-parameters for C+T, LDpred and lassosum use 500 cases and 2000 controls only. See corresponding values in table \ref{tab:AUC2}.}
-\label{fig:AUC-real-small}
-\end{figure}
-
-\vspace*{4em}
-
-\begin{table}[!htpb]
-\caption{Mean and 95\% CI of $10^4$ non-parametric bootstrap replicates of the mean AUC of 6 random splits to define the training set. Training SCT and choosing optimal hyper-parameters for C+T, LDpred and lassosum use 500 cases and 2000 controls only. These results are plotted in figure \ref{fig:AUC-real-small}.\label{tab:AUC2}}
-\vspace*{0.5em}
-\centering
-\begin{tabular}{|l|c|c|c|c|c|}
-\hline
-Trait & stdCT & maxCT & SCT & lassosum & LDpred \\ 
-\hline
-Breast cancer (BRCA) & 61.9 [61.8-62.0] & 62.9 [62.6-63.2] & 62.7 [62.4-63.1] & 57.8 [57.1-58.5] & 62.0 [62.0-62.1] \\ 
-Rheumatoid arthritis (RA) & 59.1 [59.0-59.2] & 59.5 [59.3-59.7] & 59.6 [59.3-59.8] & 58.8 [58.2-59.3] & 59.8 [59.7-59.8] \\ 
-Type 1 diabetes (T1D) & 75.4 [74.6-76.2] & 76.0 [75.1-77.0] & 78.4 [77.7-79.1] & 75.5 [74.7-76.2] & 75.5 [74.7-76.3] \\ 
-Type 2 diabetes (T2D) & 59.6 [59.5-59.7] & 60.4 [60.2-60.7] & 60.9 [60.6-61.1] & 63.2 [62.9-63.5] & 61.0 [60.6-61.3] \\ 
-Prostate cancer (PRCA) & 67.0 [66.8-67.2] & 68.5 [68.3-68.7] & 69.0 [68.5-69.4] & 57.1 [56.3-58.1] & 65.6 [65.5-65.7] \\ 
-Depression (MDD) & 54.1 [53.7-54.4] & 58.7 [58.3-59.0] & 54.7 [54.4-55.0] & 52.9 [52.0-53.8] & 60.0 [60.0-60.1] \\ 
-Coronary artery disease (CAD) & 59.7 [59.5-59.9] & 61.1 [60.6-61.5] & 60.8 [60.6-61.1] & 62.8 [62.6-62.9] & 61.0 [60.9-61.1] \\ 
-Asthma & 56.3 [56.2-56.5] & 56.9 [56.8-56.9] & 56.3 [55.6-56.9] & 57.7 [57.3-58.0] & 56.5 [56.3-56.7] \\ 
-\hline
-\end{tabular}
-\end{table}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{figure}[htbp]
-\centering
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-simu100.png}
-\caption{``100'': 100 random causal variants}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-simu10K.png}
-\caption{``10K'': 10,000 random causal variants}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-simu1M.png}
-\caption{``1M'': all 1M variants are causal variants\label{fig:neweff1M}}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-simu2chr.png}
-\caption{``2chr'': Causal variants on chromosomes 1 \& 2}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-simuerr.png}
-\caption{``err'': 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect\label{fig:newefferr}}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-simuHLA.png}
-\caption{``HLA'': 7105 causal variants in a long-range LD region of chromosome 6\label{fig:neweffHLA}}
-\end{subfigure}
-
-\caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS in the first simulation of each simulation scenario. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
-\label{fig:neweffsimu}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{figure}[htb]
-\centering
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu100.png}
-\caption{``100'': 100 random causal variants\label{fig:simugridA}}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu10K.png}
-\caption{``10K'': 10,000 random causal variants\label{fig:simugridB}}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu1M.png}
-\caption{``1M'': all 1M variants are causal variants\label{fig:simugridC}}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu2chr.png}
-\caption{``2chr'': Causal variants on chromosomes 1 \& 2}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simuerr.png}
-\caption{``err'': 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simuHLA.png}
-\caption{``HLA'': 7105 causal variants in a long-range LD region of chromosome 6}
-\end{subfigure}
-
-\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in the first simulation of each simulation scenario when using well imputed variants. Facets are presenting different clumping thresholds $r_c^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.\label{fig:simu1grid}}
-\end{figure}
-
-
-\begin{figure}[htb]
-\centering
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu100-2.png}
-\caption{``100'': 100 random causal variants}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu10K-2.png}
-\caption{``10K'': 10,000 random causal variants}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu1M-2.png}
-\caption{``1M'': all 1M variants are causal variants}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simu2chr-2.png}
-\caption{``2chr'': Causal variants on chromosomes 1 \& 2}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simuerr-2.png}
-\caption{``err'': 10,000 random causal variants, but 10\% of the GWAS effects are reported with an opposite effect}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-simuHLA-2.png}
-\caption{``HLA'': 7105 causal variants in a long-range LD region of chromosome 6}
-\end{subfigure}
-
-\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in the first simulation of each simulation scenario when using less well imputed variants. Facets are presenting different clumping thresholds $r_c^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.\label{fig:simu2grid}}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{figure}[htb]
-\centering
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-BRCA.png}
-\caption{Breast cancer}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-RA.png}
-\caption{Rheumatoid arthritis}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-T1D.png}
-\caption{Type 1 diabetes}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-T2D.png}
-\caption{Type 2 diabetes}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-PRCA.png}
-\caption{Prostate cancer}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-MDD.png}
-\caption{Depression}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-CAD.png}
-\caption{Coronary artery disease}
-\end{subfigure}
-\\~\\~\\
-\begin{subfigure}[b]{0.7\textwidth}
-\includegraphics[width=\textwidth]{new-effects-asthma.png}
-\caption{Asthma}
-\end{subfigure}
-
-\caption{New effect sizes resulting from SCT versus initial effect sizes of GWAS in real data applications. Only non-zero effects are represented. Red line corresponds to the 1:1 line.}
-\label{fig:neweffreal}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{figure}[htb]
-\centering
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-BRCA.png}
-\caption{Breast cancer}
-\end{subfigure}
-\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-RA.png}
-\caption{Rheumatoid arthritis\label{fig:grid-RA}}
-\end{subfigure}
-\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-T1D.png}
-\caption{Type 1 diabetes}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-T2D.png}
-\caption{Type 2 diabetes}
-\end{subfigure}
-\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-PRCA.png}
-\caption{Prostate cancer}
-\end{subfigure}
-\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-MDD.png}
-\caption{Depression\label{fig:grid-MDD}}
-\end{subfigure}
-\end{figure}
-
-\begin{figure}[htb]\ContinuedFloat
-\centering
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-CAD.png}
-\caption{Coronary artery disease\label{fig:grid-CAD}}
-\end{subfigure}
-\\~\\
-\begin{subfigure}[b]{\textwidth}
-\includegraphics[width=\textwidth]{grid-asthma.png}
-\caption{Asthma}
-\end{subfigure}
-
-\caption{AUC values (for the training set) when predicting disease status for many parameters of C+T in real data applications. Facets are presenting different clumping thresholds $r_c^2$ from 0.01 to 0.95, window sizes $w_c$ from 52 to 50,000 kb, and imputation thresholds from 0.3 to 0.95. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{figure}[htb]
-\centering
-\includegraphics[width=\textwidth]{grid-MDD-with-MAF.png}
-\caption{AUC values (for the training set) when predicting MDD status for many parameters of C+T in real data application. Facets are presenting different MAF thresholds (top), and imputation thresholds from 0.3 to 0.95 (right). Parameter $r_c^2$ was fixed at 0.5 and $w_c$ at 1000 kb. The x-axis corresponds to the remaining hyper-parameter, the p-value threshold $p_T$; here, -log10(p-values) are represented using a logarithmic scale.\label{fig:grid-MAF}}
-\end{figure}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\clearpage
-\subsection*{Caution on using covariates}
-
-For example, because prevalence of CAD is much higher in men than in women in the UKBB (8-9\% vs 2\%), adding sex in the model amount to fitting two different intercepts, centering distributions of fitted probabilities around disease prevalence (Figure \ref{fig:sexCAD}). This increases the AUC from 63.9\% to 74.4\% but results in a model that would classify all women as healthy. A possible solution would be to report AUC figures for each gender separately, or even to fit a model for each gender separately (in the stacking step).
-Fitting models separately would enable the use of sex chromosomes without introducing bias.
-As for ancestry concerns, fitting different models for different ancestries might be a way to get more calibrated results and to account for differences in effect sizes and LD.
-However, here for CAD, fitting two separate models for each gender results in a slight loss of predictive performance, while using variable `sex' does not change results when they are reported for each gender separately, with an AUC of 64.9\% [63.5-66.3] for men and 62.5\% [59.8-65.2] for women.
-Thus, adding `sex' as a covariate in the model may provide a model with similar discrimination and with better calibration of probabilities (if prevalence in the data is representative of prevalence in the population). Yet, we would like to emphasize again that reporting one AUC figure for all individuals would be misleading in the case of using variable `sex' in the model.
-
-\begin{figure}[htb]
-\centerline{\includegraphics[width=0.8\textwidth]{dens-prob-CAD.png}}
-\caption{Distribution of predicted probabilities of Coronary Artery Disease (CAD) in the UK Biobank using SCT. Upper / lower panels corresponds to women / men. Left panels correspond to a model using C+T scores and variable `sex' when fitting penalized logistic regression in the stacking step. Right panels correspond to performing stacking of C+T scores without using variable `sex'.}
-\label{fig:sexCAD}
-\end{figure}
 
 \end{document}
