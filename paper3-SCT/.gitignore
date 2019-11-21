@@ -7,3 +7,4 @@
 *.synctex.gz
 *.aux
 *.tex.bak
+!SCT*.pdf
