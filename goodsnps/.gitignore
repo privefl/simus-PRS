@@ -1,1 +1,10 @@
 tmp-data/
+*.bbl
+*.blg
+*.dvi
+*.log
+*.out
+paper*.pdf
+*.synctex.gz
+*.aux
+*.tex.bak
