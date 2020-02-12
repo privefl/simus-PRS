@@ -10,7 +10,7 @@ roll_mean_sq <- function(x, size) sqrt(bigutilsr::rollmean(x ** 2, size))
 merged <- readRDS("tmp-data/sumstats_merged.rds")
 str(merged)
 
-qual <- rowMeans(sapply(merged[c(5, 9:16)], function(x) {
+merged$qual <- qual <- rowMeans(sapply(merged[c(5, 9:16)], function(x) {
   ifelse(is.na(x), 0, pmin(pmax(0, x), 1))
 }))
 hist(qual)
@@ -69,3 +69,7 @@ print(log(sum(unlist(dist_inter) ** 2))) +
   print(log(1 + sum(1 - qual[inter])))        # 49.5 + 11.7 -> 61.2
 print(log(sum(unlist(dist_hm3)   ** 2))) +
   print(log(1 + sum(1 - qual[inter2])))       # 42.0 + 12.6 -> 54.5
+
+mean(qual[subset_ukbb])
+mean(qual[inter])
+mean(qual[inter2])
